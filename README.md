@@ -1,7 +1,5 @@
 # Knobset
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/harpchad/knobset/badge)](https://scorecard.dev/viewer/?uri=github.com/harpchad/knobset)
-
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
 trunking scanner. Runs on macOS, iPad, Linux and Windows. Windows on ARM

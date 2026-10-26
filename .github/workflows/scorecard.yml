@@ -1,11 +1,8 @@
 # OpenSSF Scorecard: grades the repo's supply-chain practices (branch
 # protection, pinned actions, token permissions and so on) weekly and on
-# pushes to main. Results go to the Security tab's code scanning alerts and
-# to the public Scorecard API, which backs the README badge.
-#
-# publish_results limits what this workflow may contain: GitHub-hosted
-# Ubuntu, read-only top-level permissions, and only actions from actions/,
-# github/codeql-action and ossf/scorecard-action.
+# pushes to main. Results go only to the Security tab's code scanning
+# alerts; publish_results is off, so nothing goes to the public Scorecard
+# API and there's no badge.
 name: Scorecard
 
 on:
@@ -26,8 +23,6 @@ jobs:
     permissions:
       # Upload results to code scanning.
       security-events: write
-      # Publish results to the Scorecard API.
-      id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,7 +32,7 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
-          publish_results: true
+          publish_results: false
 
       - uses: github/codeql-action/upload-sarif@v4
         with:

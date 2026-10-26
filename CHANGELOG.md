@@ -14,9 +14,9 @@ All notable changes to Knobset are documented here. The format follows
 - `SHA256SUMS.txt` on each release, for checking downloads.
 - Signed build provenance attestations for the Linux and Windows
   installers, checked with `gh attestation verify`.
-- CodeQL code scanning and an OpenSSF Scorecard workflow. GitHub Actions
-  are now updated by Dependabot, with third-party actions pinned to commit
-  SHAs.
+- CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
+  to the Security tab. GitHub Actions are now updated by Dependabot, with
+  third-party actions pinned to commit SHAs.
 
 ### Changed
 
