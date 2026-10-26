@@ -44,8 +44,9 @@ starts cold: about 55 billed minutes a release, and 3 to 9 per PR push.
 
 No MSI: NSIS installs per user without admin rights, and nobody deploys
 Knobset with Group Policy. Adding `msi` to the Windows `bundles` is all it
-takes if that changes. No ARM builds either (Windows on ARM runs the x64
-installer under emulation; Linux ARM would need an ARM runner).
+takes if that changes. Windows on ARM gets a native installer from the
+`windows-11-arm` runner (free on public repos); it would also run the x64
+one under emulation. No Linux ARM build yet.
 
 ## The pager's USB link
 
