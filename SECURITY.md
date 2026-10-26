@@ -3,7 +3,9 @@
 ## Reporting a vulnerability
 
 Use GitHub's private reporting: on the repo's **Security** tab, choose
-**Report a vulnerability**. Don't open a public issue for it.
+**Report a vulnerability**, or go straight to
+<https://github.com/harpchad/knobset/security/advisories/new>. Don't open
+a public issue for it.
 
 Expect a reply within a week. Knobset is maintained by one person in
 spare time, so fixes ship in the next release rather than on a schedule.
