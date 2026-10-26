@@ -6,6 +6,11 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-26
+
+The first release from the public repository. Pager behaviour is the same
+as 0.6.0.
+
 ### Added
 
 - A native Windows on ARM installer (`Knobset_<version>_arm64-setup.exe`),

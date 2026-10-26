@@ -57,8 +57,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.6.0
-        CFBundleVersion: "0.6.0"
+        CFBundleShortVersionString: 0.6.1
+        CFBundleVersion: "0.6.1"
     entitlements:
       path: knobset_iOS/knobset_iOS.entitlements
     scheme:
