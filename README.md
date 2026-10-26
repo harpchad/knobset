@@ -47,6 +47,22 @@ with `shasum -a 256 -c SHA256SUMS.txt --ignore-missing` on a Mac or
 compare the hash with the file's line in `SHA256SUMS.txt` (case doesn't
 matter).
 
+A checksum shows the file is the one on the release page. In releases
+after 0.6.1, the Linux and Windows installers also carry a signed build
+provenance attestation, which shows the file was built by this repo's CI
+from that release's tag. Check one with the GitHub CLI:
+
+```sh
+gh attestation verify Knobset_<version>_arm64-setup.exe -R harpchad/knobset \
+  --source-ref refs/tags/v<version>
+```
+
+Keep `--source-ref`: without it, a build from any branch of the repo would
+also pass.
+
+The Mac DMG is built and notarized by Apple's tools instead, so it has no
+attestation; Gatekeeper checks its signature when you open it.
+
 ## Installing on a Mac
 
 Download `Knobset_<version>_universal.dmg` from the

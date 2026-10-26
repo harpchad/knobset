@@ -12,6 +12,11 @@ All notable changes to Knobset are documented here. The format follows
   NDIS driver to the pager on Windows on ARM. Device Manager can't do it
   there, so the 0.6.1 advice to pick the driver by hand doesn't work.
 - `SHA256SUMS.txt` on each release, for checking downloads.
+- Signed build provenance attestations for the Linux and Windows
+  installers, checked with `gh attestation verify`.
+- CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
+  to the Security tab. GitHub Actions are now updated by Dependabot, with
+  third-party actions pinned to commit SHAs.
 
 ### Changed
 
