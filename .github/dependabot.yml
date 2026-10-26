@@ -28,3 +28,14 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
 
+  # Keeps the SHA pins on third-party actions current, along with the
+  # major-version pins on GitHub's own.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]

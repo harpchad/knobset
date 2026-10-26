@@ -1,5 +1,7 @@
 # Knobset
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/harpchad/knobset/badge)](https://scorecard.dev/viewer/?uri=github.com/harpchad/knobset)
+
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
 trunking scanner. Runs on macOS, iPad, Linux and Windows. Windows on ARM
@@ -46,6 +48,18 @@ with `shasum -a 256 -c SHA256SUMS.txt --ignore-missing` on a Mac or
 `Get-FileHash .\Knobset_<version>_arm64-setup.exe` in PowerShell and
 compare the hash with the file's line in `SHA256SUMS.txt` (case doesn't
 matter).
+
+A checksum shows the file is the one on the release page. In releases
+after 0.6.1, the Linux and Windows installers also carry a signed build
+provenance attestation, which shows the file was built by this repo's CI
+from a tagged commit. Check one with the GitHub CLI:
+
+```sh
+gh attestation verify Knobset_<version>_arm64-setup.exe -R harpchad/knobset
+```
+
+The Mac DMG is built and notarized by Apple's tools instead, so it has no
+attestation; Gatekeeper checks its signature when you open it.
 
 ## Installing on a Mac
 
