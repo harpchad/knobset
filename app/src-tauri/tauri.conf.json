@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Knobset",
+  "version": "0.6.0",
+  "identifier": "com.harpchad.knobset",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Knobset",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 1000,
+        "minHeight": 640
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Utility",
+    "longDescription": "Back up, edit and program Unication G-series pagers used as P25 scanners: zones, knobs, P25 systems and talkgroups, with RadioReference import.",
+    "macOS": {
+      "minimumSystemVersion": "13.3",
+      "infoPlist": "Info.macos.plist"
+    },
+    "iOS": {
+      "minimumSystemVersion": "16.4"
+    }
+  }
+}

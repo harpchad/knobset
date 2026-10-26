@@ -1,0 +1,21 @@
+[package]
+name = "g5-cli"
+description = "Command-line tool for Unication G-series pagers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "g5"
+path = "src/main.rs"
+
+[dependencies]
+g5-proto.workspace = true
+g5-codeplug = { path = "../g5-codeplug" }
+g5-core = { path = "../g5-core" }
+sqlite2 = { path = "../sqlite2" }
+anyhow.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

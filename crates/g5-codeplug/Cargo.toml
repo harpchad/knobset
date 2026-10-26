@@ -1,0 +1,19 @@
+[package]
+name = "g5-codeplug"
+description = "Profile (codeplug) handling and radio-DB generation for Unication G-series pagers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+sqlite2 = { path = "../sqlite2" }
+thiserror.workspace = true
+serde.workspace = true
+tracing.workspace = true
+tempfile = "3"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+# Template import from the PPS installer (Inno Setup exe -> MSI -> CAB).
+innospect = "0.2"
+msi = "0.10"
+cab = "0.6"

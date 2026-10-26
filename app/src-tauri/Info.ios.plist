@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The pager is a USB network adapter at 10.10.0.12; iOS blocks LAN traffic without this. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Knobset talks to your pager over its USB network connection.</string>
+	<!-- No encryption beyond what iOS provides; skips the export question on each upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Show Documents (where backups live) in the Files app. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+</dict>
+</plist>

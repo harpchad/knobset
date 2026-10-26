@@ -1,0 +1,195 @@
+# Tests and clippy on every PR that touches code; unsigned Linux and Windows
+# installers on v* tags, manual runs, and PRs labelled `build-installers` or
+# touching this file. The signed Mac DMG and the iPad build stay local
+# (scripts/macos, scripts/ios). GitHub's free tier bills Windows minutes
+# double, so installers don't build on ordinary PR pushes.
+name: Desktop
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - "crates/**"
+      - "app/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/desktop.yml"
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # Release builds use LTO; incremental artifacts only bloat the cache.
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  check:
+    name: Test and clippy
+    # Adding some other label to a PR shouldn't rerun everything.
+    if: github.event.action != 'labeled' || github.event.label.name == 'build-installers'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    outputs:
+      installers: ${{ steps.plan.outputs.installers }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Decide whether to build installers
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'build-installers') }}
+        run: |
+          if [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
+            installers=true
+          elif gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename' | grep -qx .github/workflows/desktop.yml; then
+            installers=true
+          else
+            installers=false
+          fi
+          echo "installers=$installers" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Install Tauri's Linux prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev build-essential file
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Type-check the frontend
+        working-directory: app
+        run: |
+          npm ci
+          npx tsc --noEmit -p .
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      # Fixture tests need private pager backups and Unication templates;
+      # without them they skip.
+      - name: Test
+        run: cargo test --workspace
+
+  installers:
+    name: Installer (${{ matrix.name }})
+    needs: check
+    if: needs.check.outputs.installers == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 22.04 sets the glibc floor (2.35) for the AppImage and .deb.
+          - name: Linux
+            os: ubuntu-22.04
+            bundles: appimage,deb
+            files: |
+              target/release/bundle/appimage/*.AppImage
+              target/release/bundle/deb/*.deb
+          - name: Windows
+            os: windows-latest
+            bundles: nsis
+            files: target/release/bundle/nsis/*-setup.exe
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Tauri's Linux prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev build-essential file patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: installer
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+
+      # The only Windows run of the core crates: MSVC's build of the vendored
+      # SQLite 2 and Windows file semantics. The Linux check job covers the rest.
+      - name: Test the core crates on Windows
+        if: runner.os == 'Windows'
+        run: cargo test -p sqlite2 -p g5-proto -p g5-codeplug -p g5-core -p g5-cli
+
+      - name: Build the installer
+        working-directory: app
+        run: npx tauri build --bundles ${{ matrix.bundles }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: knobset-${{ runner.os == 'Windows' && 'windows' || 'linux' }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Attach to the GitHub Release
+    needs: installers
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      # The release (with its notes) is created by hand, as the Mac script
+      # requires. If it isn't there yet, create it and rerun this job.
+      - name: Upload installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(jq -r .version app/src-tauri/tauri.conf.json)
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::tag $TAG doesn't match tauri.conf.json version $version"
+            exit 1
+          fi
+          if ! gh release view "$TAG" >/dev/null; then
+            echo "::error::no GitHub Release $TAG yet: create it, then rerun this job (the installers are also in this run's artifacts)"
+            exit 1
+          fi
+          # The Linux artifact keeps its appimage/ and deb/ folders.
+          mapfile -t files < <(find dist -type f)
+          ls -l "${files[@]}"
+          gh release upload "$TAG" "${files[@]}" --clobber

@@ -1,0 +1,38 @@
+[workspace]
+resolver = "3"
+members = ["crates/sqlite2", "crates/g5-proto", "crates/g5-codeplug", "crates/g5-core", "crates/g5-cli", "app/src-tauri"]
+
+[workspace.package]
+version = "0.6.0"
+edition = "2024"
+license = "MPL-2.0"
+publish = false
+
+[workspace.dependencies]
+g5-proto = { path = "crates/g5-proto" }
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+jiff = "0.2"
+md-5 = "0.11"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Template import decompresses ~45 MB (cab re-reads its solid folder per
+# file); unoptimized this takes 15s+ in dev builds.
+[profile.dev.package]
+cab.opt-level = 3
+flate2.opt-level = 3
+miniz_oxide.opt-level = 3
+zlib-rs.opt-level = 3
+lzma-rust2.opt-level = 3
+innospect.opt-level = 3
+
+# App release builds (Tauri size guidance).
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

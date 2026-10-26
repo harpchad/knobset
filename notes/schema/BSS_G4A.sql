@@ -1,0 +1,60 @@
+CREATE TABLE tabBusinessOption (
+    ChannelLimit INT,
+    ZoneLimit INT
+);
+CREATE TABLE tabCustomer (
+    CustomerNationCode VARCHAR(2),
+    CustomerType VARCHAR(2),
+    CustomerCode VARCHAR(2),
+    CustomerName VARCHAR(32),
+    CustomerNote VARCHAR(240),
+    Language VARCHAR(16),
+    Version INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE tabCustomerSupport (
+    ID INTEGER,
+    Name VARCHAR(64),
+    SupportInfo VARCHAR(128)
+);
+CREATE TABLE tabFunctionList
+(
+    FunctionID INTEGER,
+    Enable INTEGER
+);
+CREATE TABLE tabPowerLevel(
+    ModelID INTEGER NOT NULL,
+    SettingID INTEGER NOT NULL,
+    UIName VARCHAR(64),
+    SettingType INTEGER,
+    Value INTEGER
+);
+CREATE TABLE tabProductAppearance (
+    ProductColor VARCHAR(3),
+    ProductPackage VARCHAR(3)
+);
+CREATE TABLE tabProtocolMode (
+    CommunicationMode VARCHAR(3),
+    CarrierSquelch INTEGER NOT NULL DEFAULT 0,
+    CtcssCdcss INTEGER NOT NULL DEFAULT 0,
+    TwoTone INTEGER NOT NULL DEFAULT 0,
+    FiveTone INTEGER NOT NULL DEFAULT 0,
+    DTMF INTEGER NOT NULL DEFAULT 0,
+    MDC1200 INTEGER NOT NULL DEFAULT 0,
+    ARDS INTEGER NOT NULL DEFAULT 0,
+    DVOA INTEGER NOT NULL DEFAULT 0,
+    P25C INTEGER NOT NULL DEFAULT 0,
+    DMRC INTEGER NOT NULL DEFAULT 0,
+    P25T INTEGER NOT NULL DEFAULT 0,
+    DMRT INTEGER NOT NULL DEFAULT 0,
+    MPT1327 INTEGER NOT NULL DEFAULT 0,
+    POCSAG INTEGER NOT NULL DEFAULT 0,
+    FLEX INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE tabTowTruckSetting (
+    CradleType        SMALLINT  NOT NULL  DEFAULT '0',
+    PowerControlMode  SMALLINT  NOT NULL  DEFAULT '0'
+);
+CREATE TABLE tabVoiceCallVocoderSetting (
+    DMRVocoder INTEGER NOT NULL DEFAULT 0,
+    DMRCompatibility INTEGER NOT NULL DEFAULT 0
+);

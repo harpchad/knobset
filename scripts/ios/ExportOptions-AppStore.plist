@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Manual App Store signing: the local "Apple Distribution" certificate and the
+  "Knobset App Store" profile. Automatic signing would fall back to Apple's
+  cloud signing, which needs a signed-in Xcode account or an Admin API key.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>YV3CNMLVPQ</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.harpchad.knobset</key>
+        <string>Knobset App Store</string>
+    </dict>
+    <key>destination</key>
+    <string>export</string>
+</dict>
+</plist>

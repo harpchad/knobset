@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The pager is a USB network adapter at 10.10.0.12; macOS 15 and later ask before an app reaches the local network. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Knobset talks to your pager over its USB network connection.</string>
+</dict>
+</plist>

@@ -1,0 +1,11 @@
+[package]
+name = "g5-proto"
+description = "Wire protocol for Unication G-series pagers (TCP over USB CDC-ECM/RNDIS)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tracing.workspace = true

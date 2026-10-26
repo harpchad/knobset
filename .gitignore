@@ -1,0 +1,19 @@
+# Unication files: never commit (copyright, not redistributable)
+*.zip
+/extract/
+/decomp/
+/scratch/
+/templates/
+
+# Pager backups (contain device serials and user profiles)
+/backups/
+
+# RadioReference exports and pastes: RadioReference's data, used for local tests
+/rr-data/
+
+# Rust / Node build output
+/target/
+node_modules/
+dist/
+
+.DS_Store
