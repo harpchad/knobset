@@ -45,6 +45,18 @@ you connect to the pager, macOS asks whether Knobset may find devices on
 your local network: allow it, because that's how Knobset reaches the pager
 over USB.
 
+## Installing on iPad
+
+Knobset for iPad is in beta on TestFlight; a public link is coming soon.
+It needs iPadOS 16.4 or later and an iPad with USB-C. Plug the pager in
+directly or through a USB-C hub: iPadOS sees it as an Ethernet adapter, so
+there's nothing to install. The first time you connect, allow Knobset to
+find devices on your local network.
+
+Backups are saved in Files, under On My iPad > Knobset > Backups. To import
+Unication's templates, download PPS on the iPad and choose it in Settings >
+Import installer.
+
 ## Installing on Linux
 
 Download `Knobset_<version>_amd64.AppImage` or `Knobset_<version>_amd64.deb`
