@@ -2,8 +2,9 @@
 
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
-trunking scanner. Runs on macOS, iPad, Linux and Windows; the Linux and
-Windows builds are new and haven't been tried against a pager yet.
+trunking scanner. Runs on macOS, iPad, Linux and Windows. Windows on ARM
+has backed up and written a pager; Linux and Windows x64 haven't been
+tried against one yet.
 
 Status: early. Works on DBV1.41b to DBV1.41e pagers (firmware V1.33, V2.02
 and V2.05 tested): back up, browse zones, knobs, systems and talkgroups, rename
@@ -30,9 +31,21 @@ Programming is file transfer of SQLite 2 databases. See [`notes/protocol.md`](no
 | `app/` | Knobset app for macOS, iPad, Linux and Windows (Tauri 2 + React) |
 | `.github/workflows/` | CI: tests and clippy on PRs; Linux and Windows installers |
 | `scripts/ios/` | App Store / TestFlight release script |
+| `scripts/windows/` | Pager driver setup for Windows on ARM |
 | `scripts/macos/` | Signed, notarized DMG release script |
 | `scripts/icons/` | Regenerates every icon size from the SVG master |
+| `scripts/release-checksums.sh` | Attaches `SHA256SUMS.txt` to a release |
 | `notes/` | Reverse-engineering notes |
+
+## Checking a download
+
+Each release has a `SHA256SUMS.txt`, and the release page shows each
+file's SHA-256 next to it. In the folder holding both, check a download
+with `shasum -a 256 -c SHA256SUMS.txt --ignore-missing` on a Mac or
+`sha256sum -c SHA256SUMS.txt --ignore-missing` on Linux. On Windows, run
+`Get-FileHash .\Knobset_<version>_arm64-setup.exe` in PowerShell and
+compare the hash with the file's line in `SHA256SUMS.txt` (case doesn't
+matter).
 
 ## Installing on a Mac
 
@@ -75,17 +88,39 @@ systemd-networkd instead, see
 ## Installing on Windows
 
 Download `Knobset_<version>_x64-setup.exe` from the same release, or
-`Knobset_<version>_arm64-setup.exe` for Windows on ARM. They aren't
-signed yet, so SmartScreen says "Windows protected your PC": choose More
-info, then Run anyway. Either installs for your user without admin rights and
-needs Windows 10 1903 or later.
+`Knobset_<version>_arm64-setup.exe` for Windows on ARM. Either installs for
+your user without admin rights and needs Windows 10 1903 or later.
 
-Windows needs Unication's RNDIS driver for the pager's USB link. It ships
-inside PPS's setup and as Unication's separate "Windows RNDIS driver setup"
-download. Once it's in,
-`ipconfig` shows a "USB Remote NDIS Network Device" adapter on
-`10.10.0.x`. Unication's driver doesn't cover Windows on ARM; there, use
-the manual route through Device Manager (untested so far). Both are in
+They aren't signed yet, so Windows warns about them:
+
+- SmartScreen says "Windows protected your PC": choose More info, then Run
+  anyway. Edge may also call the download uncommon: choose … › Keep.
+- Microsoft Defender has flagged the ARM installer as
+  `Trojan:Win32/Bearfoos.A!ml`. That's a false positive from Defender's
+  machine-learning model, and it's been reported to Microsoft. If Defender
+  removes the file, check its SHA-256 against `SHA256SUMS.txt` first, then
+  restore it from Windows Security › Virus & threat protection ›
+  Protection history (Actions › Allow on device). Don't add a folder
+  exclusion.
+
+Windows on x64 needs Unication's RNDIS driver for the pager's USB link. It
+ships inside PPS's setup and as Unication's separate "Windows RNDIS driver
+setup" download. Once it's in, `ipconfig` shows a "USB Remote NDIS Network
+Device" adapter on `10.10.0.x`.
+
+Unication's driver doesn't install on Windows on ARM, and Device Manager
+can't pick Windows' own Remote NDIS driver for the pager either. Instead,
+plug in the pager, download `install-rndis.ps1` from the same release
+([source](scripts/windows/install-rndis.ps1)) and run it once from an
+administrator PowerShell in the folder you saved it to:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-rndis.ps1
+```
+
+It only binds Windows' built-in driver, and downloads and installs nothing
+else. Afterwards `ipconfig` shows a "Remote NDIS Compatible Device" on
+`10.10.0.x`. Details for both are in
 [`notes/desktop-platforms.md`](notes/desktop-platforms.md).
 
 ## Unication templates
@@ -108,17 +143,18 @@ cd app && npm install && npm run tauri dev
 
 ## Releasing
 
-A release has four artifacts: the Mac DMG, the Linux AppImage and .deb,
-and the Windows installer, plus the iPad build on TestFlight.
+A release has seven assets: the Mac DMG, the Linux AppImage and .deb, the
+two Windows installers (x64 and ARM), the ARM driver script and
+`SHA256SUMS.txt`, plus the iPad build on TestFlight.
 
 1. Merge the release PR (version bump and CHANGELOG).
 2. Create the release and its tag together, with the CHANGELOG section as
    the notes:
    `gh release create v<version> --target main --title "Knobset <version>" --notes-file <notes>`.
 3. The new tag starts the Desktop workflow, which builds the Linux and
-   Windows installers and attaches them to the release. If the tag was
-   pushed before the release existed, rerun the workflow's last job once
-   it does.
+   Windows installers and attaches them, `install-rndis.ps1` and
+   `SHA256SUMS.txt` to the release. If the tag was pushed before the
+   release existed, rerun the workflow's last job once it does.
 4. Run the Mac and iPad scripts below from a checkout of the tag.
 
 ## Releasing to TestFlight
@@ -143,8 +179,8 @@ ASC_KEY_ID=... ASC_ISSUER_ID=... scripts/macos/release.sh
 
 It builds a universal DMG, signs it with the local Developer ID Application
 certificate, notarizes and staples both the app and the DMG with the same API
-key, and attaches the DMG to the release. The one-time setup is in the
-script's header.
+key, attaches the DMG to the release and refreshes `SHA256SUMS.txt`. The
+one-time setup is in the script's header.
 
 ## Icons
 

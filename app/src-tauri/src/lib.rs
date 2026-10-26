@@ -99,6 +99,8 @@ struct SettingsView {
     pager_addr: String,
     /// iOS: no folder pickers or Finder, so the UI hides those.
     mobile: bool,
+    /// ARM64 build. On Windows that means no Unication driver; the hint differs.
+    arm: bool,
 }
 
 #[tauri::command]
@@ -110,6 +112,7 @@ fn get_settings(state: State<'_, AppState>) -> SettingsView {
         backups_dir: state.backups_dir(),
         pager_addr: s.pager_addr,
         mobile: cfg!(mobile),
+        arm: cfg!(target_arch = "aarch64"),
     }
 }
 

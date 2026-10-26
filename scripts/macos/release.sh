@@ -62,3 +62,4 @@ echo "Notarized $dmg"
 
 gh release upload "v$version" "$dmg" --clobber -R harpchad/knobset
 echo "Attached $(basename "$dmg") to Knobset $version."
+"$root/scripts/release-checksums.sh" "v$version"

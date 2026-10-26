@@ -6,6 +6,21 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `install-rndis.ps1`, attached to each release, binds Windows' own Remote
+  NDIS driver to the pager on Windows on ARM. Device Manager can't do it
+  there, so the 0.6.1 advice to pick the driver by hand doesn't work.
+- `SHA256SUMS.txt` on each release, for checking downloads.
+
+### Changed
+
+- The Pager page tells Windows on ARM users to run `install-rndis.ps1`
+  instead of installing Unication's driver.
+- The README covers Defender's false positive on the ARM installer, and
+  Windows on ARM is now tested against a pager: backup, write and
+  read-back.
+
 ## [0.6.1] - 2026-10-26
 
 The first release from the public repository. Pager behaviour is the same

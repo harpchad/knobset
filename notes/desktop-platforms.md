@@ -164,13 +164,37 @@ Manager before installing the driver again. What's in it, checked in the extract
   Windows without test-signing or warnings.
 - `dpinst.exe`, Microsoft's driver installer, which the setup wraps.
 - Decorations for x86 and x64 only. On Windows on ARM the INF won't match;
-  use the manual route below.
+  see below.
 
-Since the INF only selects an in-box driver, there's a manual route that
-needs no Unication download (untested on the pager): Device Manager ›
-the pager's entry › Update driver › Browse my computer › Let me pick ›
-Network adapters › Microsoft › Remote NDIS Compatible Device, and accept
-the compatibility warning.
+#### Windows on ARM
+
+Without Unication's INF, Windows 11 on ARM binds the pager to `usbser.inf`
+as "USB Serial Device (COM3)": the pager's RNDIS interface reports USB
+class 02/02/FF, and `usbser.inf` takes class 02/02 when nothing more
+specific matches. Unication's INF only selects an in-box driver, so a
+manual route through Device Manager looks possible: Update driver › Browse my computer › Let me pick › Network adapters ›
+Microsoft › Remote NDIS Compatible Device. It isn't. Seen on Windows 11 on
+ARM in a UTM VM on Apple silicon, with the pager passed through:
+
+- "Let me pick" lists only Ports drivers, because the device is in the
+  Ports class, and unticking "Show compatible hardware" doesn't add the
+  Net class.
+- Have Disk pointed at a copy of `C:\Windows\INF\rndiscmp.inf` returns to
+  the same list without adding anything. That INF has
+  `[ControlFlags] ExcludeFromSelect=*`, so Device Manager never shows its
+  models in a pick list.
+
+`scripts/windows/install-rndis.ps1` does what the INF would, through
+SetupAPI: it sets the device's class GUID to Net
+(`SetupDiSetDeviceRegistryProperty`, `SPDRP_CLASSGUID`), builds a class
+driver list from `rndiscmp.inf` alone with `DI_ENUMSINGLEINF` and
+`DI_FLAGSEX_ALLOWEXCLUDEDDRVS` (which lifts the exclusion), picks "Remote
+NDIS Compatible Device" and installs it with `DiInstallDevice`. The
+adapter came up without a restart, got `10.10.0.6` by DHCP, and Knobset
+backed up and wrote the pager through it. The script is attached to each release,
+and the README tells ARM users to run it once from an administrator
+PowerShell. To undo it, uninstall the adapter in Device Manager with
+"Attempt to remove the driver" ticked, then replug.
 
 RNDIS on Windows 11: still in the box (`netrndis.inf`, `usb8023.sys`),
 including 24H2, and Microsoft hasn't announced its removal. If that ever
@@ -191,6 +215,22 @@ prompt.
   SmartScreen says "Windows protected your PC": More info › Run anyway.
   The installer is per user and needs no admin rights. It fetches WebView2
   if it's missing (Windows 11 and current Windows 10 have it).
+- **Defender on ARM.** Defender quarantined the 0.6.1 ARM installer as
+  `Trojan:Win32/Bearfoos.A!ml` on download; the x64 one passed. `!ml`
+  verdicts come from Defender's machine-learning model, not a signature
+  for known malware, and unsigned installers with no download history are
+  what it flags most. (The installer stub is x86 even in the ARM build;
+  the app inside is ARM64.) It was submitted
+  to Microsoft as a false positive (SHA-256 `b0a43919…52575866`). Every
+  build has a new hash, so the next release can be flagged again until
+  the installers are signed. The README tells users to check the hash
+  against `SHA256SUMS.txt` and restore the file from Protection history,
+  not to add a folder exclusion.
+- **Checksums.** `scripts/release-checksums.sh` writes `SHA256SUMS.txt`
+  from GitHub's own asset digests and attaches it. CI runs it after
+  attaching the Linux and Windows assets, and `scripts/macos/release.sh`
+  runs it again after the DMG, so the last one to finish leaves the full
+  list.
 - **Linux AppImage.** `chmod +x Knobset_*.AppImage` and run it. It needs
   FUSE 2 (`libfuse2`, or `libfuse2t64` on Ubuntu 24.04 and later); without
   it, run it with `--appimage-extract-and-run`.
@@ -199,12 +239,21 @@ prompt.
 - On some NVIDIA and Wayland setups WebKitGTK draws a blank window; start
   it with `WEBKIT_DISABLE_DMABUF_RENDERER=1`.
 
-**Signing is Chad's call, later.** Azure Trusted Signing is about $10 a
-month (Basic tier) and Tauri supports it through a custom `signCommand`;
-it removes "Unknown publisher" and lets SmartScreen reputation attach to
-a stable identity. Until there are Windows users beyond testers, "More
-info › Run anyway" is a reasonable price. Linux packages are routinely
-unsigned; a signed apt repository isn't worth it at this size.
+**Signing is Chad's call, later.** Signing removes "Unknown publisher",
+lets SmartScreen reputation attach to a stable identity, and makes
+Defender's ML verdicts much less likely. Two routes:
+
+- **SignPath Foundation (free).** Signs open-source projects at no cost
+  from a GitHub Actions step, after an application and review. The
+  certificate is SignPath's, so Windows shows "SignPath Foundation" as
+  the publisher, and every release needs an approval in their portal.
+- **Azure Artifact Signing (formerly Trusted Signing), $9.99 a month on
+  Basic.** The publisher is Chad's name, after identity validation. Tauri
+  supports it through a custom `signCommand`.
+
+SignPath is the one to try first: it costs nothing, and the publisher
+name matters less than the warning going away. Linux packages are
+routinely unsigned; a signed apt repository isn't worth it at this size.
 
 ## Where the app keeps things
 
@@ -247,21 +296,28 @@ remove any of this.
   under `Program Files` or `Program Files (x86)` (from the MSI's layout). Importing the PPS download works the
   same on every OS.
 
-## Untested on real Linux and Windows machines
+## What's been checked on real hardware
 
-CI proves the code compiles, the core tests pass on Ubuntu and Windows,
-and the installers build. Nobody has yet:
+Windows 11 on ARM, in a UTM VM on Apple silicon with pager C passed
+through over USB, running the ARM64 build of 0.6.1:
 
-- installed and launched either build, or seen the UI in WebView2 or
-  WebKitGTK (layout, fonts, dark mode, dialogs);
+- the installer (after the Defender false positive above) and the app in
+  WebView2;
+- the pager's link, after `install-rndis.ps1`;
+- template import from `PPS_Setup.msi` (657 files, the same as on the
+  Mac);
+- a backup, identical to the Mac's backup of the same pager;
+- a knob rename written with its safety backup, and the read-back after
+  the pager rebooted, so the RNDIS link came back on its own.
+
+Nobody has yet:
+
+- installed or run either Linux build, or seen the UI in WebKitGTK;
 - brought the pager's link up on Linux (`cdc_ether` binding, NetworkManager
-  DHCP) or on Windows (Unication's driver on Windows 11, the manual
-  Remote NDIS route, Windows on ARM);
-- taken a backup or written to a pager from Linux or Windows, including
-  the read-back after the pager reboots (RNDIS on Windows may drop the
-  link where ECM on macOS doesn't);
-- used "Show in file manager", the folder and file pickers, or template
-  import on either OS;
+  DHCP);
+- run the x64 Windows build on x64 hardware, or used Unication's driver on
+  Windows 11;
+- used "Show in file manager" or the folder pickers on Linux or Windows;
 - opened a backup under a non-ASCII Windows user name (the UTF-8 code page
   fix is untested);
 - checked that the AppImage runs on a distro newer than Ubuntu 22.04.

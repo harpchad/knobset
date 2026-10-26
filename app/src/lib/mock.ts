@@ -173,7 +173,7 @@ let backups: BackupInfo[] = [
   { id: "demo2-20261015-180500Z", path: "/Users/demo/backups/demo2-20261015-180500Z", model: summary.model, serial: "G5DEMO0002", sw_version: "V1.33-08182022", db_version: "DBV1.41b", taken: "20261015-180500Z", taken_at: "2026-10-15T18:05:00Z", sidecars_ok: true, radio_db_sidecar_stale: false },
   { id: "demo3-20261014-120000Z", path: "/Users/demo/backups/demo3-20261014-120000Z", model: "G5B67BF-SXVXEN1401UNI-0002-180625", serial: "G5DEMO0003", sw_version: "V2.02", db_version: "DBV1.41c", taken: "20261014-120000Z", taken_at: "2026-10-14T12:00:00Z", sidecars_ok: true, radio_db_sidecar_stale: false },
 ];
-let settings: Settings = { templates_dir: "/Users/demo/Unication/G_Series_PPS/DataBase", templates_ok: true, backups_dir: "/Users/demo/backups", pager_addr: "10.10.0.12:32769", mobile: false };
+let settings: Settings = { templates_dir: "/Users/demo/Unication/G_Series_PPS/DataBase", templates_ok: true, backups_dir: "/Users/demo/backups", pager_addr: "10.10.0.12:32769", mobile: false, arm: false };
 
 const kindOf = (k: Knob): KnobKind => (k.system_id ? "trunked" : k.mode === 4 || k.mode === 36 ? "scan" : k.analog ? "conventional" : "digital");
 

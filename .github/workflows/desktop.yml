@@ -113,7 +113,8 @@ jobs:
             artifact: windows-x64
             files: target/release/bundle/nsis/*-setup.exe
           # Native ARM64 build. Unication's RNDIS driver is x64 only, so on
-          # ARM Windows the pager needs Windows' own RNDIS driver.
+          # ARM Windows the pager needs Windows' own RNDIS driver, bound by
+          # scripts/windows/install-rndis.ps1 (attached to each release).
           - name: Windows ARM
             os: windows-11-arm
             bundles: nsis
@@ -200,5 +201,8 @@ jobs:
           fi
           # The Linux artifact keeps its appimage/ and deb/ folders.
           mapfile -t files < <(find dist -type f)
+          files+=(scripts/windows/install-rndis.ps1)
           ls -l "${files[@]}"
           gh release upload "$TAG" "${files[@]}" --clobber
+          # The Mac script reruns this after attaching the DMG.
+          scripts/release-checksums.sh "$TAG"

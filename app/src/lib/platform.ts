@@ -12,9 +12,15 @@ export const desktopOs: DesktopOs = (() => {
 /** What the OS calls its file manager, for "Show in …" actions. */
 export const fileManagerName = { macos: "Finder", windows: "File Explorer", linux: "file manager" }[desktopOs];
 
-/** How the pager's USB network link comes up on this OS. */
-export const usbLinkHint = {
-  macos: "It appears as a network adapter, so macOS and iPadOS need no driver.",
-  windows: "It appears as a network adapter. Windows needs Unication's RNDIS driver, which comes with PPS, installed once.",
-  linux: "It appears as a network adapter (cdc_ether), so Linux needs no driver; NetworkManager picks up its address.",
-}[desktopOs];
+/** How the pager's USB network link comes up on this OS. Unication's driver
+ * is x64 only, so Windows on ARM gets Knobset's script instead. */
+export function usbLinkHint(arm: boolean): string {
+  if (desktopOs === "windows" && arm) {
+    return "It appears as a network adapter once Windows' Remote NDIS driver is bound to it. Unication's driver doesn't support ARM, so run Knobset's install-rndis.ps1 once (see the README).";
+  }
+  return {
+    macos: "It appears as a network adapter, so macOS and iPadOS need no driver.",
+    windows: "It appears as a network adapter. Windows needs Unication's RNDIS driver, which comes with PPS, installed once.",
+    linux: "It appears as a network adapter (cdc_ether), so Linux needs no driver; NetworkManager picks up its address.",
+  }[desktopOs];
+}

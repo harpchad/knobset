@@ -24,7 +24,14 @@ In scope:
 - A write that changes a pager in a way the read-back check doesn't catch.
 - Tampered release downloads. The Mac DMG is signed and notarized. The
   Windows and Linux installers aren't signed yet, so download them only
-  from this repo's Releases page.
+  from this repo's Releases page and check them against the release's
+  `SHA256SUMS.txt` (see the README).
+
+Microsoft Defender has flagged the unsigned Windows on ARM installer as
+`Trojan:Win32/Bearfoos.A!ml`. That's a known false positive from
+Defender's machine-learning model. If the file's SHA-256 matches
+`SHA256SUMS.txt`, it's the file this repo's CI built. If it doesn't match,
+that is worth reporting.
 
 Out of scope: weaknesses in the pager's own protocol, such as its
 unauthenticated USB link. Knobset can't fix those, but notes on them are
