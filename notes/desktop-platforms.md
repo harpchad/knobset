@@ -231,13 +231,16 @@ prompt.
   attaching the Linux and Windows assets, and `scripts/macos/release.sh`
   runs it again after the DMG, so the last one to finish leaves the full
   list.
-- **Attestations.** On tag builds, each installer job signs a SLSA build
-  provenance attestation for its files with `actions/attest` (Sigstore's
-  public instance, since the repo is public). `gh attestation verify
-  <file> -R harpchad/knobset --source-ref refs/tags/v<version>` checks
-  it. Manual runs are attested too, from their branch, so the
-  `--source-ref` is what separates a release build from any other. Attestations don't touch
-  SmartScreen or Defender, which only look at Authenticode signatures.
+- **Attestations.** On tag and manual builds, each installer job signs a
+  SLSA build provenance attestation for its files with `actions/attest`
+  (Sigstore's public instance, since the repo is public). `gh attestation
+  verify <file> -R harpchad/knobset --source-ref refs/tags/v<version>`
+  checks it. Manual runs are attested from their branch, so the
+  `--source-ref` is what separates a release build from any other. An
+  attestation isn't an Authenticode signature and Windows never sees it,
+  so it doesn't change what SmartScreen or Defender do; those go by
+  Authenticode signatures, download reputation and, for Defender, its
+  machine-learning model.
 - **Linux AppImage.** `chmod +x Knobset_*.AppImage` and run it. It needs
   FUSE 2 (`libfuse2`, or `libfuse2t64` on Ubuntu 24.04 and later); without
   it, run it with `--appimage-extract-and-run`.
