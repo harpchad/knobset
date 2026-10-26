@@ -1,8 +1,8 @@
 # Tests and clippy on every PR that touches code; unsigned Linux and Windows
 # installers on v* tags, manual runs, and PRs labelled `build-installers` or
 # touching this file. The signed Mac DMG and the iPad build stay local
-# (scripts/macos, scripts/ios). GitHub's free tier bills Windows minutes
-# double, so installers don't build on ordinary PR pushes.
+# (scripts/macos, scripts/ios). Installers take 10 to 20 minutes, so they
+# don't build on ordinary PR pushes.
 name: Desktop
 
 on:
@@ -103,12 +103,21 @@ jobs:
           - name: Linux
             os: ubuntu-22.04
             bundles: appimage,deb
+            artifact: linux
             files: |
               target/release/bundle/appimage/*.AppImage
               target/release/bundle/deb/*.deb
           - name: Windows
             os: windows-latest
             bundles: nsis
+            artifact: windows-x64
+            files: target/release/bundle/nsis/*-setup.exe
+          # Native ARM64 build. Unication's RNDIS driver is x64 only, so on
+          # ARM Windows the pager needs Windows' own RNDIS driver.
+          - name: Windows ARM
+            os: windows-11-arm
+            bundles: nsis
+            artifact: windows-arm64
             files: target/release/bundle/nsis/*-setup.exe
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -152,7 +161,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: knobset-${{ runner.os == 'Windows' && 'windows' || 'linux' }}
+          name: knobset-${{ matrix.artifact }}
           path: ${{ matrix.files }}
           if-no-files-found: error
           retention-days: 14

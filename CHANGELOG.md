@@ -6,6 +6,15 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A native Windows on ARM installer (`Knobset_<version>_arm64-setup.exe`),
+  built by CI alongside the x64 one. Not yet tried on a pager; Unication's
+  RNDIS driver is x64 only, so ARM needs Windows' own Remote NDIS driver,
+  picked by hand in Device Manager.
+- `CONTRIBUTING.md` and `SECURITY.md`, and an iPad install section in the
+  README.
+
 ## [0.6.0] - 2026-10-25
 
 On a pager so far: display format, talkgroup colour and talkgroup alert

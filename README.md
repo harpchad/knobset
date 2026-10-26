@@ -74,16 +74,18 @@ systemd-networkd instead, see
 
 ## Installing on Windows
 
-Download `Knobset_<version>_x64-setup.exe` from the same release. It isn't
+Download `Knobset_<version>_x64-setup.exe` from the same release, or
+`Knobset_<version>_arm64-setup.exe` for Windows on ARM. They aren't
 signed yet, so SmartScreen says "Windows protected your PC": choose More
-info, then Run anyway. It installs for your user without admin rights and
+info, then Run anyway. Either installs for your user without admin rights and
 needs Windows 10 1903 or later.
 
 Windows needs Unication's RNDIS driver for the pager's USB link. It ships
 inside PPS's setup and as Unication's separate "Windows RNDIS driver setup"
 download. Once it's in,
 `ipconfig` shows a "USB Remote NDIS Network Device" adapter on
-`10.10.0.x`. Details, and a manual route through Device Manager, are in
+`10.10.0.x`. Unication's driver doesn't cover Windows on ARM; there, use
+the manual route through Device Manager (untested so far). Both are in
 [`notes/desktop-platforms.md`](notes/desktop-platforms.md).
 
 ## Unication templates
