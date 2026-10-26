@@ -234,7 +234,9 @@ prompt.
 - **Attestations.** On tag builds, each installer job signs a SLSA build
   provenance attestation for its files with `actions/attest` (Sigstore's
   public instance, since the repo is public). `gh attestation verify
-  <file> -R harpchad/knobset` checks it. Attestations don't touch
+  <file> -R harpchad/knobset --source-ref refs/tags/v<version>` checks
+  it. Manual runs are attested too, from their branch, so the
+  `--source-ref` is what separates a release build from any other. Attestations don't touch
   SmartScreen or Defender, which only look at Authenticode signatures.
 - **Linux AppImage.** `chmod +x Knobset_*.AppImage` and run it. It needs
   FUSE 2 (`libfuse2`, or `libfuse2t64` on Ubuntu 24.04 and later); without
