@@ -21,7 +21,7 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
 }
 
 export default function PagerPage() {
-  const { device, backups, refreshBackups, openBackup, busy, setBusy } = useStore();
+  const { device, backups, refreshBackups, openBackup, busy, setBusy, settings } = useStore();
   const [running, setRunning] = useState(false);
   const progress = useProgress(running);
 
@@ -46,7 +46,7 @@ export default function PagerPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-8">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Pager</h1>
-        <p className="text-sm text-muted-foreground">Connect a G-series pager with its USB cable. {usbLinkHint}</p>
+        <p className="text-sm text-muted-foreground">Connect a G-series pager with its USB cable. {usbLinkHint(settings?.arm ?? false)}</p>
       </div>
 
       {device?.state === "connected" ? (

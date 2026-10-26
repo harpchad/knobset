@@ -560,6 +560,8 @@ export interface Settings {
   pager_addr: string;
   /** iOS: no folder pickers or Finder. */
   mobile: boolean;
+  /** ARM64 build (Windows on ARM needs a different driver). */
+  arm: boolean;
 }
 
 // RadioReference import (g5_codeplug::rr_import).
