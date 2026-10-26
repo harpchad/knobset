@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/sqlite2", "crates/g5-proto", "crates/g5-codeplug", "crates/g5-core", "crates/g5-cli", "app/src-tauri"]
 
 [workspace.package]
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 license = "MPL-2.0"
 publish = false

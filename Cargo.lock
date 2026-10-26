@@ -1351,7 +1351,7 @@ dependencies = [
 
 [[package]]
 name = "g5-cli"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1365,7 +1365,7 @@ dependencies = [
 
 [[package]]
 name = "g5-codeplug"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cab",
  "innospect",
@@ -1380,7 +1380,7 @@ dependencies = [
 
 [[package]]
 name = "g5-core"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "g5-codeplug",
@@ -1396,7 +1396,7 @@ dependencies = [
 
 [[package]]
 name = "g5-proto"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "thiserror 2.0.21",
  "tracing",
@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "knobset"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "anyhow",
  "block2",
@@ -3740,7 +3740,7 @@ dependencies = [
 
 [[package]]
 name = "sqlite2"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cc",
  "tempfile",
