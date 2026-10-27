@@ -2,8 +2,9 @@
 # Schema: https://coderabbit.ai/integrations/schema.v2.json
 #
 # Everything that lets CodeRabbit commit to a branch (finishing touches,
-# CI fixes, conflict resolution) is off: it reviews and comments only.
-# Auto-approval is off too until its reviews have earned some trust.
+# CI fixes, conflict resolution) is off: it reviews, comments and approves.
+# Its approval is a review signal (and what Scorecard's Code-Review check
+# counts), not a merge gate: main's ruleset requires no approvals.
 language: en-US
 tone_instructions: >-
   Be brief and specific. Flag real bugs, security issues and broken
@@ -13,9 +14,19 @@ early_access: false
 
 reviews:
   profile: chill
+  # Approve once its threads are resolved and the latest commit is
+  # reviewed, up to moderate merge and security risk; request changes for
+  # blocking findings. Stricter for pager writes and workflows.
   auto_approvals:
-    enabled: false
+    enabled: true
     allow_author_approval: false
+    max_merge_risk: moderate
+    max_security_risk: moderate
+    overrides:
+      - paths: ["crates/g5-codeplug/**", "crates/g5-core/**"]
+        max_merge_risk: low
+      - paths: [".github/workflows/**"]
+        max_security_risk: low
   # Keep the author's PR description as written; the summary goes in the
   # walkthrough comment instead.
   high_level_summary: true
