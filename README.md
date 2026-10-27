@@ -1,5 +1,7 @@
 # Knobset
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15986/badge)](https://www.bestpractices.dev/projects/15986) [![Latest release](https://img.shields.io/github/v/release/harpchad/knobset)](https://github.com/harpchad/knobset/releases/latest) [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
+
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
 trunking scanner. Runs on macOS, iPad, Linux and Windows. Windows on ARM
