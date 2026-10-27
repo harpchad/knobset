@@ -122,3 +122,40 @@ impl Templates {
         self.dir.join("DB_Base").join(format!("DB_Base_G4A.{db_version}.db"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+
+    fn zip_at(dir: &Path, build: impl FnOnce(&mut zip::ZipWriter<fs::File>, SimpleFileOptions)) -> std::path::PathBuf {
+        let path = dir.join("u3db_PC.zip");
+        let mut w = zip::ZipWriter::new(fs::File::create(&path).unwrap());
+        build(&mut w, SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored));
+        w.finish().unwrap();
+        path
+    }
+
+    #[test]
+    fn zip_entries_must_stay_inside_the_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        // Absolute names are safe too: enclosed_name re-roots them inside.
+        for name in ["../escape.db", "a/../../escape.db", "..\\escape.db"] {
+            let path = zip_at(dir.path(), |w, o| {
+                w.start_file(name, o).unwrap();
+                w.write_all(b"x").unwrap();
+            });
+            let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
+            assert!(err.contains("unsafe path"), "{name}: {err}");
+        }
+    }
+
+    #[test]
+    fn zip_symlinks_are_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = zip_at(dir.path(), |w, o| w.add_symlink("u3db.db", "/etc/passwd", o).unwrap());
+        let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
+        assert!(err.contains("symlink"), "{err}");
+    }
+}

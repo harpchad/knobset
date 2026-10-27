@@ -167,3 +167,16 @@ fn safe_component(name: &str) -> Result<String, Error> {
         _ => Err(Error::Installer(format!("unsafe path in MSI: {name}"))),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn msi_names_must_be_one_plain_component() {
+        assert_eq!(safe_component("u3db.db").unwrap(), "u3db.db");
+        for bad in ["..", "../x", "a/b", "a\\b", "/etc/passwd", "", "."] {
+            assert!(safe_component(bad).is_err(), "{bad:?} accepted");
+        }
+    }
+}
