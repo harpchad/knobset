@@ -1,8 +1,8 @@
 # Advisories reviewed and accepted for now. OSV-Scanner, and Scorecard's
 # Vulnerabilities check through it, skip these until ignoreUntil, when they
-# come back for another look. All five reach Knobset only through Tauri's
-# Linux stack (`cargo tree --target x86_64-unknown-linux-gnu -i <crate>`);
-# the macOS, iPad and Windows builds don't contain them.
+# come back for another look. The first five reach Knobset only through
+# Tauri's Linux stack (`cargo tree --target x86_64-unknown-linux-gnu -i
+# <crate>`); the macOS, iPad and Windows builds don't contain them.
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2024-0429"
@@ -35,3 +35,13 @@ id = "RUSTSEC-2026-0372"
 ignoreUntil = 2027-04-26
 reason = """zvariant_derive is unmaintained (no vulnerability). Build-time proc \
 macro on the same zbus path as RUSTSEC-2026-0370."""
+
+[[IgnoredVulns]]
+id = "GHSA-qwgh-2vcv-g2f7"
+ignoreUntil = 2027-04-27
+reason = """block-buffer below 0.12.1: a caught panic in the compress callback can \
+corrupt the buffer's cursor. 0.10.4 comes in through sha2 0.10 (tauri-codegen at \
+build time, wry at runtime), with no fixed 0.10 release. Not reachable in shipped \
+builds: the release profile sets panic = "abort", so no panic is ever caught and \
+the buffer is never reused, and sha2's compress doesn't panic. Goes away when \
+Tauri moves to sha2 0.11."""

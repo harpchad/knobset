@@ -22,8 +22,9 @@ All notable changes to Knobset are documented here. The format follows
 - CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
   to the Security tab. GitHub Actions are now updated by Dependabot, and
   every action is pinned to a commit SHA.
-- `osv-scanner.toml` records five Linux-only dependency advisories as
-  reviewed, each with its reason and a review date.
+- `osv-scanner.toml` records six dependency advisories as reviewed, each
+  with its reason and a review date: five Linux-only, plus `block-buffer`
+  0.10, which release builds can't reach because they abort on panic.
 - CodeRabbit reviews pull requests (`.coderabbit.yaml`); it comments only.
 
 ### Changed
