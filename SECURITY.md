@@ -41,6 +41,22 @@ to the Security tab, and fuzzes the pager and RadioReference parsers
 weekly. Dependency advisories that were reviewed and accepted are listed,
 with reasons, in `osv-scanner.toml`.
 
+## Cryptography
+
+Knobset implements no cryptography of its own and stores no passwords.
+It uses MD5 (the RustCrypto `md-5` crate) in two places, both because the
+pager requires it:
+
+- **Access check.** When a pager has an access password, its protocol
+  takes `MD5(password)` as uppercase hex, the same as Unication's PPS
+  sends. MD5 is broken, and an unsalted MD5 of a short password can be
+  reversed by brute force, so treat that hash as the password itself. It
+  travels only over the pager's local USB link and Knobset never stores
+  it. Don't reuse the pager's password anywhere else.
+- **Integrity checks.** The pager keeps `.md5` files next to its
+  databases, and backups record each file's MD5, to catch corruption.
+  These aren't a defense against tampering.
+
 Out of scope: weaknesses in the pager's own protocol, such as its
 unauthenticated USB link. Knobset can't fix those, but notes on them are
 welcome in [`notes/protocol.md`](notes/protocol.md).

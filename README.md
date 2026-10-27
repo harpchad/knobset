@@ -222,10 +222,10 @@ the iOS icons and builds `icon.icns` from a macOS-shaped variant.
 
 ## Contributing
 
-Bug reports, pager test results and pull requests are welcome. Read
-[CONTRIBUTING.md](CONTRIBUTING.md) first: it covers what can't go in the
-repo (Unication code and files, RadioReference data, pager backups) and
-what a change to pager writes needs. Report security issues privately, as
+Bug reports, feature requests, pager test results and pull requests are
+welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers what
+can't go in the repo (Unication code and files, RadioReference data, pager
+backups) and what a change to pager writes needs. Report security issues privately, as
 described in [SECURITY.md](SECURITY.md).
 
 ## License
