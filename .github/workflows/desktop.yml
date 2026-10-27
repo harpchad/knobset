@@ -1,6 +1,6 @@
-# Tests and clippy on every PR that touches code; unsigned Linux and Windows
-# installers on v* tags, manual runs, and PRs labelled `build-installers` or
-# touching this file. Tag and manual builds get signed build provenance
+# Tests and clippy on every PR that touches code and every push to main;
+# unsigned Linux and Windows installers on v* tags, manual runs, and PRs
+# labelled `build-installers` or touching this file. Tag and manual builds get signed build provenance
 # attestations (`gh attestation verify <file> -R harpchad/knobset`). The
 # signed Mac DMG and the iPad build stay local (scripts/macos, scripts/ios).
 # Installers take 10 to 20 minutes, so they don't build on ordinary PR
@@ -21,7 +21,10 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/desktop.yml"
+  # Tests on every push to main, so each merge gets a pass/fail result;
+  # installers only on tags.
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -55,10 +58,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
           PR: ${{ github.event.pull_request.number }}
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'build-installers') }}
         run: |
-          if [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
+          if [ "$EVENT" = push ] && [ "$REF" = refs/heads/main ]; then
+            installers=false
+          elif [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
             installers=true
           elif gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename' | grep -qx .github/workflows/desktop.yml; then
             installers=true
