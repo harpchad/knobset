@@ -19,6 +19,8 @@ All notable changes to Knobset are documented here. The format follows
   have to fetch the attestation from GitHub.
 - Weekly fuzzing (cargo-fuzz) of the pager frame and response parsers and
   the RadioReference import.
+- Tests and clippy also run on every push to `main` that touches code, so
+  `main` is checked after each merge.
 - CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
   to the Security tab. GitHub Actions are now updated by Dependabot, and
   every action is pinned to a commit SHA.
