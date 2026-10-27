@@ -40,6 +40,13 @@ share.
   reads pager or RadioReference input should keep its fuzz target in
   `fuzz/` working.
 
+## Code style
+
+CI rejects a PR unless `cargo clippy --workspace --all-targets -- -D warnings`
+is clean and the frontend type-checks (`npx tsc --noEmit` in `app/`). Match
+the surrounding code otherwise: lines in this repo run long (rustfmt's
+defaults aren't applied), and comments explain why, not what.
+
 ## Building
 
 You need stable Rust, Node 24 and

@@ -38,6 +38,9 @@ All notable changes to Knobset are documented here. The format follows
 
 ### Fixed
 
+- `g5 -vv` no longer prints the pager's access password or its MD5: the
+  packet trace shows only the length of the handshake response and the
+  access checks.
 - A packet whose content is shorter than its header says is now an error
   instead of a panic (no caller could send one, but the parser is public).
 
