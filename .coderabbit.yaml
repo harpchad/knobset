@@ -17,13 +17,15 @@ early_access: false
 reviews:
   profile: chill
   # Approve once its threads are resolved and the latest commit is
-  # reviewed, up to moderate merge and security risk; request changes for
-  # blocking findings. Stricter for pager writes and workflows.
+  # reviewed, up to moderate merge risk; request changes for blocking
+  # findings. Stricter for pager writes. A security-risk limit only
+  # approves commits that got a security assessment, which docs-only and
+  # small commits don't, so it applies to workflow changes alone; those
+  # fall back to the maintainer's bypass when no assessment exists.
   auto_approvals:
     enabled: true
     allow_author_approval: false
     max_merge_risk: moderate
-    max_security_risk: moderate
     overrides:
       - paths: ["crates/g5-codeplug/**", "crates/g5-core/**"]
         max_merge_risk: low
