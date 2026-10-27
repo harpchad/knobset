@@ -1,0 +1,37 @@
+# Advisories reviewed and accepted for now. OSV-Scanner, and Scorecard's
+# Vulnerabilities check through it, skip these until ignoreUntil, when they
+# come back for another look. All five reach Knobset only through Tauri's
+# Linux stack (`cargo tree --target x86_64-unknown-linux-gnu -i <crate>`);
+# the macOS, iPad and Windows builds don't contain them.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0429"
+ignoreUntil = 2027-04-26
+reason = """glib 0.18 VariantStrIter unsoundness. glib comes from Tauri's GTK3 \
+stack (tauri > muda > gtk), which stays on glib 0.18 until Tauri moves to GTK4. \
+Knobset doesn't use glib, and none of the crates in its tree (gtk, muda, tao, \
+webkit2gtk, wry) calls array_iter_str or VariantStrIter (checked 2026-10-26)."""
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+ignoreUntil = 2027-04-26
+reason = """proc-macro-error is unmaintained (no vulnerability). Build-time only, \
+via glib-macros in the same GTK3 stack."""
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0370"
+ignoreUntil = 2027-04-26
+reason = """zvariant is unmaintained (no vulnerability). Comes from zbus, which \
+tauri-plugin-opener uses on Linux for D-Bus file manager calls."""
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0371"
+ignoreUntil = 2027-04-26
+reason = """zbus_names is unmaintained (no vulnerability). Same zbus path as \
+RUSTSEC-2026-0370."""
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0372"
+ignoreUntil = 2027-04-26
+reason = """zvariant_derive is unmaintained (no vulnerability). Build-time proc \
+macro on the same zbus path as RUSTSEC-2026-0370."""
