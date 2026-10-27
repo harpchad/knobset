@@ -3,8 +3,10 @@
 #
 # Everything that lets CodeRabbit commit to a branch (finishing touches,
 # CI fixes, conflict resolution) is off: it reviews, comments and approves.
-# Its approval is a review signal (and what Scorecard's Code-Review check
-# counts), not a merge gate: main's ruleset requires no approvals.
+# main's ruleset requires one approval from someone other than the last
+# pusher, so its approval is what normally lets a PR merge (and what
+# Scorecard's Code-Review check counts). The maintainer can bypass it,
+# only through a PR, when CodeRabbit doesn't approve.
 language: en-US
 tone_instructions: >-
   Be brief and specific. Flag real bugs, security issues and broken
