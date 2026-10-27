@@ -48,11 +48,14 @@ It uses MD5 (the RustCrypto `md-5` crate) in two places, both because the
 pager requires it:
 
 - **Access check.** When a pager has an access password, its protocol
-  takes `MD5(password)` as uppercase hex, the same as Unication's PPS
-  sends. MD5 is broken, and an unsalted MD5 of a short password can be
-  reversed by brute force, so treat that hash as the password itself. It
-  travels only over the pager's local USB link and Knobset never stores
-  it. Don't reuse the pager's password anywhere else.
+  takes the MD5 of the password (with leading and trailing spaces
+  removed) as uppercase hex, the same as Unication's PPS sends. MD5 is
+  broken, and an unsalted MD5 of a short password can be reversed by
+  brute force, so treat that hash as the password itself. It travels only
+  over the pager's local USB link and Knobset never stores it. The CLI's
+  packet trace (`g5 -vv`) shows only the length of the access checks and
+  of the handshake response, which carries the password in plain text.
+  Don't reuse the pager's password anywhere else.
 - **Integrity checks.** The pager keeps `.md5` files next to its
   databases, and backups record each file's MD5, to catch corruption.
   These aren't a defense against tampering.
