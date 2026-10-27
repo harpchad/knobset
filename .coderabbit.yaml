@@ -62,6 +62,9 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+    # The default (5) paused reviews mid-PR, which under main's approval
+    # rule also stalls the merge until someone comments @coderabbitai review.
+    auto_pause_after_reviewed_commits: 15
   finishing_touches:
     docstrings:
       enabled: false
