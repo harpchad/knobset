@@ -1,0 +1,11 @@
+# Advisories in app/package-lock.json reviewed and accepted for now (see
+# ../osv-scanner.toml for the Rust side). OSV-Scanner reads the config next
+# to each lockfile, and Scorecard's Vulnerabilities check goes through it.
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-04-27
+reason = """deepmerge 4.3.1 prototype poisoning (low). It's only a dependency of the \
+shadcn CLI, a devDependency in app/ used at development time; nothing in the \
+production dependency tree uses it (`npm ls deepmerge --omit=dev` is empty), so \
+it isn't in any shipped build. No fixed release exists yet."""

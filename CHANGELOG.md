@@ -6,6 +6,19 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-27
+
+A security fix for the command-line tool, Windows on ARM support that
+works with a real pager, and verifiable downloads. Pager writes are
+unchanged from 0.6.1.
+
+### Security
+
+- `g5 -vv` printed the pager's access password in plain text (from the
+  handshake response) and its MD5 (from the access checks). The packet
+  trace now shows only their length. If you saved `-vv` output from a
+  pager with an access password, delete it.
+
 ### Added
 
 - `install-rndis.ps1`, attached to each release, binds Windows' own Remote
@@ -13,31 +26,30 @@ All notable changes to Knobset are documented here. The format follows
   there, so the 0.6.1 advice to pick the driver by hand doesn't work.
 - `SHA256SUMS.txt` on each release, for checking downloads.
 - Signed build provenance attestations for the Linux and Windows
-  installers, checked with `gh attestation verify`.
-- A `.sigstore.json` attestation bundle next to each Linux and Windows
-  installer on the release, so `gh attestation verify --bundle` doesn't
-  have to fetch the attestation from GitHub.
+  installers, checked with `gh attestation verify`, and a `.sigstore.json`
+  bundle next to each one so `--bundle` doesn't have to fetch the
+  attestation from GitHub.
 - Weekly fuzzing (cargo-fuzz) of the pager frame and response parsers and
   the RadioReference import.
-- Tests and clippy run on every pull request, docs-only ones included,
-  and on every push to `main`. Merging to `main` now needs one approving
-  review, a passing "Test and clippy" check and an up-to-date branch.
-- CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
-  to the Security tab. GitHub Actions are now updated by Dependabot, and
-  every action is pinned to a commit SHA.
-- `osv-scanner.toml` records six dependency advisories as reviewed, each
-  with its reason and a review date: five Linux-only, plus `block-buffer`
-  0.10, which release builds can't reach because they abort on panic.
-- GOVERNANCE.md, CODE_OF_CONDUCT.md (Contributor Covenant 2.1),
-  ROADMAP.md, ARCHITECTURE.md, a security assurance case
-  (`notes/assurance-case.md`), a Quick start in the README, and the
-  vulnerability response process in SECURITY.md.
 - Tests that zip and MSI template imports refuse paths escaping their
   folder and zip symlinks.
+- Project documents: GOVERNANCE.md, CODE_OF_CONDUCT.md (Contributor
+  Covenant 2.1), ROADMAP.md, ARCHITECTURE.md, a security assurance case
+  (`notes/assurance-case.md`), a Quick start in the README, and the
+  vulnerability response process in SECURITY.md.
+- CI and review: CodeQL code scanning, an OpenSSF Scorecard workflow,
+  Dependabot updates for GitHub Actions with every action pinned to a
+  commit SHA, tests and clippy on every pull request and push to `main`,
+  and CodeRabbit reviews (it comments and approves, but never commits).
+  Merging to `main` needs an approving review, a passing "Test and
+  clippy" check and an up-to-date branch.
+- `osv-scanner.toml` and `app/osv-scanner.toml` record seven reviewed
+  dependency advisories, each with its reason and a review date. None is
+  reachable in a shipped build: five are Linux-only, `block-buffer` 0.10
+  needs a caught panic (release builds abort), and `deepmerge` is only a
+  development dependency.
 - The OpenSSF Best Practices badge (passing), plus release and license
   badges, at the top of the README.
-- CodeRabbit reviews pull requests (`.coderabbit.yaml`). It comments and
-  approves low-to-moderate-risk changes, but never commits.
 
 ### Changed
 
@@ -49,9 +61,6 @@ All notable changes to Knobset are documented here. The format follows
 
 ### Fixed
 
-- `g5 -vv` no longer prints the pager's access password or its MD5: the
-  packet trace shows only the length of the handshake response and the
-  access checks.
 - A packet whose content is shorter than its header says is now an error
   instead of a panic (no caller could send one, but the parser is public).
 
