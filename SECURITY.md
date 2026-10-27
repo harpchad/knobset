@@ -4,11 +4,30 @@
 
 Use GitHub's private reporting: on the repo's **Security** tab, choose
 **Report a vulnerability**, or go straight to
-<https://github.com/harpchad/knobset/security/advisories/new>. Don't open
-a public issue for it.
+<https://github.com/harpchad/knobset/security/advisories/new>. If you
+can't use GitHub, email [security@knobset.com](mailto:security@knobset.com).
+Don't open a public issue for it.
 
 Expect a reply within a week. Knobset is maintained by one person in
 spare time, so fixes ship in the next release rather than on a schedule.
+
+## How reports are handled
+
+1. **Acknowledge** the report within a week, in the private advisory.
+2. **Triage:** reproduce it, judge severity (CVSS), and agree with the
+   reporter on whether it's in scope.
+3. **Fix** in the advisory's private fork, with a regression test, and
+   review it there before anything is public.
+4. **Release** the fix, then publish the GitHub Security Advisory
+   (requesting a CVE when one is warranted) and list the fix in the
+   CHANGELOG.
+5. **Credit** the reporter in the advisory and the release notes, unless
+   they'd rather not be named.
+
+If a report isn't a vulnerability, it's closed with an explanation; if
+it's a plain bug, it moves to a public issue with the reporter's OK.
+Why Knobset's security requirements are met is argued in
+[`notes/assurance-case.md`](notes/assurance-case.md).
 
 ## Scope
 

@@ -14,6 +14,20 @@ knobs and edit a knob's talkgroup list, create and edit P25 systems (or
 import them from RadioReference), then write to the pager with a safety
 backup and byte-for-byte read-back verification.
 
+## Quick start
+
+1. Install Knobset for your platform (see the Installing sections below)
+   and download Unication's free PPS installer.
+2. In Knobset, open **Settings** and choose **Import installer…** with the
+   PPS file. Writing needs Unication's templates; reading doesn't.
+3. Plug in the pager and turn it on. The **Pager** page shows its model,
+   firmware and radio DB version once it's connected.
+4. Choose **Back up now**, then **Open latest backup** to browse zones,
+   knobs, systems and talkgroups.
+5. Make a change (rename a knob, say) and choose **Write to pager**.
+   Knobset takes a safety backup first, writes, waits for the pager to
+   restart and checks every file byte for byte.
+
 ## How it talks to the pager
 
 The pager enumerates as a USB network adapter (CDC-ECM, so macOS and Linux
@@ -227,8 +241,13 @@ the iOS icons and builds `icon.icns` from a macOS-shaped variant.
 Bug reports, feature requests, pager test results and pull requests are
 welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it covers what
 can't go in the repo (Unication code and files, RadioReference data, pager
-backups) and what a change to pager writes needs. Report security issues privately, as
-described in [SECURITY.md](SECURITY.md).
+backups) and what a change to pager writes needs. Everyone taking part follows the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report security issues privately,
+as described in [SECURITY.md](SECURITY.md). How decisions are made is in
+[GOVERNANCE.md](GOVERNANCE.md), plans for the year in
+[ROADMAP.md](ROADMAP.md), and the design in
+[ARCHITECTURE.md](ARCHITECTURE.md). For anything else, write to
+[hello@knobset.com](mailto:hello@knobset.com).
 
 ## License
 
