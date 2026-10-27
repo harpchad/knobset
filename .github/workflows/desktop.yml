@@ -1,4 +1,4 @@
-# Tests and clippy on every PR and push to main that touches code;
+# Tests and clippy on every PR that touches code and every push to main;
 # unsigned Linux and Windows installers on v* tags, manual runs, and PRs
 # labelled `build-installers` or touching this file. Tag and manual builds get signed build provenance
 # attestations (`gh attestation verify <file> -R harpchad/knobset`). The
@@ -21,18 +21,11 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/desktop.yml"
-  # Tests on every push to main that touches code, so main itself is
-  # checked after each merge; installers only on tags. GitHub doesn't
-  # apply path filters to tag pushes.
+  # Tests on every push to main, so each merge gets a pass/fail result;
+  # installers only on tags.
   push:
     branches: [main]
     tags: ["v*"]
-    paths:
-      - "crates/**"
-      - "app/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/desktop.yml"
   workflow_dispatch:
 
 concurrency:
