@@ -15,7 +15,8 @@ All notable changes to Knobset are documented here. The format follows
 - Signed build provenance attestations for the Linux and Windows
   installers, checked with `gh attestation verify`.
 - A `.sigstore.json` attestation bundle next to each Linux and Windows
-  installer on the release, for offline `gh attestation verify --bundle`.
+  installer on the release, so `gh attestation verify --bundle` doesn't
+  have to fetch the attestation from GitHub.
 - Weekly fuzzing (cargo-fuzz) of the pager frame and response parsers and
   the RadioReference import.
 - CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting

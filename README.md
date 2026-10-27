@@ -69,6 +69,10 @@ gh attestation verify Knobset_<version>_arm64-setup.exe -R harpchad/knobset \
   --bundle Knobset_<version>_arm64-setup.exe.sigstore.json
 ```
 
+That still downloads Sigstore's trusted root. To check on a machine with
+no network, save it first with `gh attestation trusted-root >
+trusted_root.jsonl` and add `--custom-trusted-root trusted_root.jsonl`.
+
 The Mac DMG is built and notarized by Apple's tools instead, so it has no
 attestation; Gatekeeper checks its signature when you open it.
 

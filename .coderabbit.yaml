@@ -18,7 +18,8 @@ reviews:
     allow_author_approval: false
   # Keep the author's PR description as written; the summary goes in the
   # walkthrough comment instead.
-  high_level_summary: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
   collapse_walkthrough: true
   sequence_diagrams: false
   suggested_labels: false
