@@ -25,6 +25,8 @@ All notable changes to Knobset are documented here. The format follows
 - `osv-scanner.toml` records six dependency advisories as reviewed, each
   with its reason and a review date: five Linux-only, plus `block-buffer`
   0.10, which release builds can't reach because they abort on panic.
+- The OpenSSF Best Practices badge (passing), plus release and license
+  badges, at the top of the README.
 - CodeRabbit reviews pull requests (`.coderabbit.yaml`). It comments and
   approves low-to-moderate-risk changes, but never commits.
 
