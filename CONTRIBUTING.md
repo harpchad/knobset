@@ -34,6 +34,11 @@ share.
   write guard's allowlist, and a test against a real PPS-written database.
   Say in the PR which pager and firmware you tested on. If you couldn't
   test on a pager, say that instead.
+- **New behavior comes with tests.** A PR that adds a feature or fixes a
+  bug adds an automated test for it to `cargo test --workspace`, or says
+  why it can't (UI-only changes, for example). Changes to a parser that
+  reads pager or RadioReference input should keep its fuzz target in
+  `fuzz/` working.
 
 ## Building
 
@@ -53,6 +58,15 @@ Those tests use stand-in zone and knob names; `backups/fixture-names.txt`
 (`stand-in=real name` per line) maps them to the names in the backups.
 Writing needs Unication's templates: import PPS in Settings, or run
 `g5 import-templates`.
+
+The parsers for pager frames and responses and for RadioReference
+exports have fuzz targets in `fuzz/`. They need nightly Rust and
+cargo-fuzz:
+
+```sh
+cargo install cargo-fuzz
+cd fuzz && cargo +nightly fuzz run frame   # or pager_responses, rr_import
+```
 
 ## Pull requests
 

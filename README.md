@@ -35,6 +35,7 @@ Programming is file transfer of SQLite 2 databases. See [`notes/protocol.md`](no
 | `scripts/macos/` | Signed, notarized DMG release script |
 | `scripts/icons/` | Regenerates every icon size from the SVG master |
 | `scripts/release-checksums.sh` | Attaches `SHA256SUMS.txt` to a release |
+| `fuzz/` | cargo-fuzz targets for the pager and RadioReference parsers |
 | `notes/` | Reverse-engineering notes |
 
 ## Checking a download
@@ -58,7 +59,15 @@ gh attestation verify Knobset_<version>_arm64-setup.exe -R harpchad/knobset \
 ```
 
 Keep `--source-ref`: without it, a build from any branch of the repo would
-also pass.
+also pass. Each of those installers also has a `<file>.sigstore.json` on
+the release, the same attestation as a file. With it, the check works
+without looking the attestation up on GitHub:
+
+```sh
+gh attestation verify Knobset_<version>_arm64-setup.exe -R harpchad/knobset \
+  --source-ref refs/tags/v<version> \
+  --bundle Knobset_<version>_arm64-setup.exe.sigstore.json
+```
 
 The Mac DMG is built and notarized by Apple's tools instead, so it has no
 attestation; Gatekeeper checks its signature when you open it.
@@ -157,19 +166,22 @@ cargo test --workspace          # golden tests need private pager backups in ./b
 cd app && npm install && npm run tauri dev
 ```
 
+Fuzzing needs nightly Rust; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Releasing
 
-A release has seven assets: the Mac DMG, the Linux AppImage and .deb, the
-two Windows installers (x64 and ARM), the ARM driver script and
-`SHA256SUMS.txt`, plus the iPad build on TestFlight.
+A release has the Mac DMG, the Linux AppImage and .deb, the two Windows
+installers (x64 and ARM), a `.sigstore.json` attestation bundle for each
+Linux and Windows installer, the ARM driver script and `SHA256SUMS.txt`,
+plus the iPad build on TestFlight.
 
 1. Merge the release PR (version bump and CHANGELOG).
 2. Create the release and its tag together, with the CHANGELOG section as
    the notes:
    `gh release create v<version> --target main --title "Knobset <version>" --notes-file <notes>`.
 3. The new tag starts the Desktop workflow, which builds the Linux and
-   Windows installers and attaches them, `install-rndis.ps1` and
-   `SHA256SUMS.txt` to the release. If the tag was pushed before the
+   Windows installers and attaches them, their `.sigstore.json` bundles,
+   `install-rndis.ps1` and `SHA256SUMS.txt` to the release. If the tag was pushed before the
    release existed, rerun the workflow's last job once it does.
 4. Run the Mac and iPad scripts below from a checkout of the tag.
 

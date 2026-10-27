@@ -14,9 +14,16 @@ All notable changes to Knobset are documented here. The format follows
 - `SHA256SUMS.txt` on each release, for checking downloads.
 - Signed build provenance attestations for the Linux and Windows
   installers, checked with `gh attestation verify`.
+- A `.sigstore.json` attestation bundle next to each Linux and Windows
+  installer on the release, for offline `gh attestation verify --bundle`.
+- Weekly fuzzing (cargo-fuzz) of the pager frame and response parsers and
+  the RadioReference import.
 - CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
-  to the Security tab. GitHub Actions are now updated by Dependabot, with
-  third-party actions pinned to commit SHAs.
+  to the Security tab. GitHub Actions are now updated by Dependabot, and
+  every action is pinned to a commit SHA.
+- `osv-scanner.toml` records five Linux-only dependency advisories as
+  reviewed, each with its reason and a review date.
+- CodeRabbit reviews pull requests (`.coderabbit.yaml`); it comments only.
 
 ### Changed
 
@@ -25,6 +32,11 @@ All notable changes to Knobset are documented here. The format follows
 - The README covers Defender's false positive on the ARM installer, and
   Windows on ARM is now tested against a pager: backup, write and
   read-back.
+
+### Fixed
+
+- A packet whose content is shorter than its header says is now an error
+  instead of a panic (no caller could send one, but the parser is public).
 
 ## [0.6.1] - 2026-10-26
 

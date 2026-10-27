@@ -36,8 +36,10 @@ Defender's machine-learning model. If the file's SHA-256 matches
 `SHA256SUMS.txt` (and, for releases after 0.6.1, its attestation
 verifies), it's the file this repo published. If it doesn't match, report it.
 
-The repo runs CodeQL code scanning and OpenSSF Scorecard; both report to
-the Security tab.
+The repo runs CodeQL code scanning and OpenSSF Scorecard, both reporting
+to the Security tab, and fuzzes the pager and RadioReference parsers
+weekly. Dependency advisories that were reviewed and accepted are listed,
+with reasons, in `osv-scanner.toml`.
 
 Out of scope: weaknesses in the pager's own protocol, such as its
 unauthenticated USB link. Knobset can't fix those, but notes on them are
