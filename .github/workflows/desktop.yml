@@ -1,10 +1,10 @@
-# Tests and clippy on every PR that touches code and every push to main;
+# Tests and clippy on every PR and every push to main (a required check);
 # unsigned Linux and Windows installers on v* tags, manual runs, and PRs
-# labelled `build-installers` or touching this file. Tag and manual builds get signed build provenance
-# attestations (`gh attestation verify <file> -R harpchad/knobset`). The
-# signed Mac DMG and the iPad build stay local (scripts/macos, scripts/ios).
-# Installers take 10 to 20 minutes, so they don't build on ordinary PR
-# pushes.
+# labelled `build-installers` or touching this file. Tag and manual builds
+# get signed build provenance attestations (`gh attestation verify <file>
+# -R harpchad/knobset`). The signed Mac DMG and the iPad build stay local
+# (scripts/macos, scripts/ios). Installers take 10 to 20 minutes, so they
+# don't build on ordinary PR pushes.
 #
 # Every action is pinned to a commit SHA, with its version in a comment for
 # Dependabot. dtolnay/rust-toolchain has no version tags (its branches name
@@ -13,14 +13,10 @@
 name: Desktop
 
 on:
+  # Every PR, docs-only ones included: "Test and clippy" is a required
+  # check on main, so it has to report on every PR.
   pull_request:
     types: [opened, synchronize, reopened, labeled]
-    paths:
-      - "crates/**"
-      - "app/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/desktop.yml"
   # Tests on every push to main, so each merge gets a pass/fail result;
   # installers only on tags.
   push:
