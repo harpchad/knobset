@@ -44,10 +44,11 @@ unchanged from 0.6.1.
   Merging to `main` needs an approving review, a passing "Test and
   clippy" check and an up-to-date branch.
 - `osv-scanner.toml` and `app/osv-scanner.toml` record seven reviewed
-  dependency advisories, each with its reason and a review date. None is
-  reachable in a shipped build: five are Linux-only, `block-buffer` 0.10
-  needs a caught panic (release builds abort), and `deepmerge` is only a
-  development dependency.
+  dependency advisories, each with its reason and a review date. Five are
+  in the Linux build through Tauri's GTK and D-Bus crates, but Knobset
+  never calls their affected code (four are only "unmaintained" notices);
+  `block-buffer` 0.10 needs a caught panic, and release builds abort on
+  panic; `deepmerge` is a development dependency and isn't in any build.
 - The OpenSSF Best Practices badge (passing), plus release and license
   badges, at the top of the README.
 
