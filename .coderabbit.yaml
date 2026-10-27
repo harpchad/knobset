@@ -20,8 +20,8 @@ reviews:
   # reviewed, up to moderate merge risk; request changes for blocking
   # findings. A security-risk limit only approves commits that got a
   # security assessment, and docs-only commits get none, so the limit is
-  # set per path instead of globally: any PR touching code, build, CI or
-  # this file needs an assessment at or under the limit (low for
+  # set per path instead of globally: any PR touching code, build, CI,
+  # .gitignore or this file needs an assessment at or under the limit (low for
   # workflows), while a docs-only PR is judged on merge risk alone.
   # Overrides only tighten; the strictest matching value wins.
   auto_approvals:
@@ -39,6 +39,9 @@ reviews:
           - "Cargo.lock"
           - "osv-scanner.toml"
           - ".coderabbit.yaml"
+          # Keeps pager backups, Unication files and RadioReference data
+          # out of git.
+          - "**/.gitignore"
         max_security_risk: moderate
       - paths: ["crates/g5-codeplug/**", "crates/g5-core/**"]
         max_merge_risk: low
