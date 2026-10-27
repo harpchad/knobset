@@ -1,0 +1,41 @@
+# Fuzz targets for the parsers that take input from outside Knobset: frames
+# and responses from the pager, and RadioReference exports. Run with
+# cargo-fuzz on nightly, e.g. `cargo +nightly fuzz run frame`; CI runs each
+# target weekly (.github/workflows/fuzz.yml).
+[package]
+name = "knobset-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+g5-proto = { path = "../crates/g5-proto" }
+g5-codeplug = { path = "../crates/g5-codeplug" }
+
+# Its own workspace: nightly-only, and kept out of the app's Cargo.lock.
+[workspace]
+
+[[bin]]
+name = "frame"
+path = "fuzz_targets/frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pager_responses"
+path = "fuzz_targets/pager_responses.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rr_import"
+path = "fuzz_targets/rr_import.rs"
+test = false
+doc = false
+bench = false

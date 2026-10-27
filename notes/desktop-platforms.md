@@ -236,7 +236,13 @@ prompt.
   (Sigstore's public instance, since the repo is public). `gh attestation
   verify <file> -R harpchad/knobset --source-ref refs/tags/v<version>`
   checks it. Manual runs are attested from their branch, so the
-  `--source-ref` is what separates a release build from any other. An
+  `--source-ref` is what separates a release build from any other. The
+  job also saves the attestation's Sigstore bundle as
+  `<file>.sigstore.json` (one bundle covers both Linux files), the
+  release carries it, and `--bundle` verifies without fetching the
+  attestation from GitHub (fully offline also needs a saved trusted root,
+  `--custom-trusted-root`).
+  Scorecard's Signed-Releases check looks for exactly these files. An
   attestation isn't an Authenticode signature and Windows never sees it,
   so it doesn't change what SmartScreen or Defender do; those go by
   Authenticode signatures, download reputation and, for Defender, its

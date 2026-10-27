@@ -144,6 +144,9 @@ impl Header {
         let content = if self.content_len == 0 {
             Vec::new()
         } else {
+            if tail.len() < self.content_len + 2 {
+                return Err(Error::Malformed("packet shorter than its header's length"));
+            }
             let (content, crc) = tail.split_at(self.content_len);
             let got = u16::from_be_bytes([crc[0], crc[1]]);
             let want = crc16_kermit(content);
@@ -234,5 +237,14 @@ mod tests {
         assert!(matches!(h.into_packet(&b[HEADER_LEN..]), Err(Error::Crc { .. })));
         b[3] ^= 1;
         assert!(matches!(Header::decode(b[..HEADER_LEN].try_into().unwrap()), Err(Error::Checksum { .. })));
+    }
+
+    #[test]
+    fn short_tail_is_an_error() {
+        let b = Packet::new(op::READ_FILE, 1, 0, PacketType::Inform, vec![0, 1, 0xAA]).encode();
+        let h = Header::decode(b[..HEADER_LEN].try_into().unwrap()).unwrap();
+        for cut in [0, 1, 4] {
+            assert!(matches!(h.into_packet(&b[HEADER_LEN..HEADER_LEN + cut]), Err(Error::Malformed(_))));
+        }
     }
 }

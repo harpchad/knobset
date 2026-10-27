@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["crates/sqlite2", "crates/g5-proto", "crates/g5-codeplug", "crates/g5-core", "crates/g5-cli", "app/src-tauri"]
+# Nightly-only cargo-fuzz targets, built as their own workspace.
+exclude = ["fuzz"]
 
 [workspace.package]
 version = "0.6.1"

@@ -1,0 +1,131 @@
+# CodeRabbit review settings. These override the dashboard.
+# Schema: https://coderabbit.ai/integrations/schema.v2.json
+#
+# Everything that lets CodeRabbit commit to a branch (finishing touches,
+# CI fixes, conflict resolution) is off: it reviews and comments only.
+# Auto-approval is off too until its reviews have earned some trust.
+language: en-US
+tone_instructions: >-
+  Be brief and specific. Flag real bugs, security issues and broken
+  project rules; skip style nits that clippy, tsc or the formatter
+  already catch.
+early_access: false
+
+reviews:
+  profile: chill
+  auto_approvals:
+    enabled: false
+    allow_author_approval: false
+  # Keep the author's PR description as written; the summary goes in the
+  # walkthrough comment instead.
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  # The "Prompt for AI agents" block in each comment; findings are enough.
+  enable_prompt_for_ai_agents: false
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_usernames: ["dependabot[bot]"]
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    description:
+      mode: "off"
+    issue_assessment:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: >-
+        Conventional Commits: type(optional scope): description, for
+        example `fix(codeplug): ...` or `docs: ...`.
+  path_filters:
+    - "!crates/sqlite2/vendor/**"
+    - "!app/src-tauri/gen/**"
+    - "!app/src-tauri/icons/**"
+    - "!**/Cargo.lock"
+    - "!app/package-lock.json"
+  path_instructions:
+    - path: "**"
+      instructions: >-
+        Knobset programs Unication G-series pagers. Hard rules for every
+        change: no decompiled or copied Unication code (PPS or firmware),
+        and no Unication files (template databases, installers, manuals);
+        describing behavior in our own words with a class or table name
+        is fine. No RadioReference data: tests, mocks and docs use made-up
+        talkgroups, sites and frequencies. No pager backups, serial
+        numbers, unit IDs or access passwords. Flag anything that looks
+        like any of these.
+    - path: "crates/{g5-codeplug,g5-core}/**"
+      instructions: >-
+        These crates build what gets written to a real pager. A change
+        that writes a new kind of data, or changes the bytes of an existing
+        write, needs a spec in notes/, an entry in the write guard's
+        allowlist and a test against a real PPS-written database. Every
+        write must stay checkable byte for byte by the read-back. Flag
+        writes that skip the safety backup, the guard or the read-back.
+    - path: "crates/g5-proto/**"
+      instructions: >-
+        Wire protocol from notes/protocol.md. The pager sends its access
+        password in plain text during the handshake: it must never be
+        logged, stored, displayed or put in an error message; only whether
+        one is set may be kept. Check framing and length handling for
+        panics on malformed input.
+    - path: "crates/sqlite2/src/**"
+      instructions: >-
+        Safe wrapper over vendored SQLite 2.8.17. Check unsafe blocks for
+        soundness, lifetimes of returned pointers and error handling.
+    - path: "fuzz/**"
+      instructions: >-
+        cargo-fuzz targets, nightly only, their own workspace. A target must
+        call the same entry points the app uses on untrusted input, and must
+        not hide panics (no catch_unwind).
+    - path: "app/**"
+      instructions: >-
+        Tauri 2 app with a React and TypeScript frontend. Knobset makes no
+        internet requests: its only network traffic is the pager's USB link
+        on 10.10.0.0/16. Flag new network calls, telemetry or remote
+        content.
+    - path: ".github/workflows/**"
+      instructions: >-
+        Least-privilege token permissions per job. Every action, GitHub's
+        own included, is pinned to a full commit SHA with its version in a
+        comment (Dependabot keeps them current). Flag untrusted input
+        interpolated into run steps; pass it through env instead.
+    - path: "**/*.md"
+      instructions: >-
+        Prose style: no em dashes, and no en dashes or spaced hyphens used
+        in their place.
+
+chat:
+  art: false
+  allow_non_org_members: false
+
+knowledge_base:
+  learnings:
+    scope: local
+  code_guidelines:
+    enabled: true
+    filePatterns: ["CONTRIBUTING.md"]
+
+issue_enrichment:
+  planning:
+    enabled: false
