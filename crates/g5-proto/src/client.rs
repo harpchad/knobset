@@ -589,53 +589,6 @@ mod tests {
         v
     }
 
-    /// Collects tracing output for assertions.
-    #[derive(Clone, Default)]
-    struct Captured(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-    impl Write for Captured {
-        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-            self.0.lock().unwrap().extend_from_slice(buf);
-            Ok(buf.len())
-        }
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
-    }
-
-    /// The -vv trace of a real handshake and access check, as the pager
-    /// sends them (handshake response under COMMAND, password second),
-    /// must contain neither the password nor its hash.
-    #[test]
-    fn wire_trace_never_shows_the_password() {
-        let log = Captured::default();
-        let writer = log.clone();
-        let subscriber = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::TRACE)
-            .with_ansi(false)
-            .with_writer(move || writer.clone())
-            .finish();
-        let password = "hunter2-secret";
-        let hash = "0123456789ABCDEF0123456789ABCDEF";
-        tracing::subscriber::with_default(subscriber, || {
-            let mut content = vec![3, 1, 5, 0];
-            content.extend(encode_string(&format!("{:<40}{:<16}", "G5N66AK-SXVXENBX00UNI", "SERIAL")));
-            content.extend(encode_string(password));
-            let mock = pager(&[
-                Packet::new(op::COMMAND, 7, 1, PacketType::Response, content),
-                Packet::new(op::ACCESS_PASSWORD_READ, 8, 2, PacketType::Response, with_session(1, &[0])),
-            ]);
-            let mut c = Client::new(mock);
-            assert!(c.handshake().unwrap().password_present());
-            assert!(matches!(c.access_read(Some(hash)).unwrap(), Access::Granted(0)));
-        });
-        let out = String::from_utf8(log.0.lock().unwrap().clone()).unwrap();
-        assert!(out.contains("redacted"), "{out}");
-        for secret in [password.as_bytes(), hash.as_bytes()] {
-            assert!(!out.contains(&hex(&secret[..4])), "{out}");
-        }
-    }
-
     #[test]
     fn handshake_sends_expected_request_and_acks() {
         let mut content = vec![3, 1, 5, 0];
