@@ -101,7 +101,8 @@ impl<T: Transport> Client<T> {
 
     fn send(&mut self, p: &Packet) -> Result<(), Error> {
         let bytes = p.encode();
-        trace!(target: "g5::wire", "tx {:?} op={} {}", p.ptype, hex(&p.opcode), hex(&bytes));
+        let (head, rest) = bytes.split_at(HEADER_LEN.min(bytes.len()));
+        trace!(target: "g5::wire", "tx {:?} op={} {} {}", p.ptype, hex(&p.opcode), hex(head), trace_content(&p.opcode, rest));
         self.io.write_all(&bytes)?;
         self.io.flush()?;
         Ok(())
@@ -120,7 +121,7 @@ impl<T: Transport> Client<T> {
         };
         let mut tail = vec![0u8; if header.content_len == 0 { 0 } else { header.content_len + 2 }];
         read_exact(&mut self.io, &mut tail)?;
-        trace!(target: "g5::wire", "rx {:?} op={} seq={} {} {}", header.ptype, hex(&header.opcode), header.seq, hex(&h), hex(&tail));
+        trace!(target: "g5::wire", "rx {:?} op={} seq={} {} {}", header.ptype, hex(&header.opcode), header.seq, hex(&h), trace_content(&header.opcode, &tail));
         header.into_packet(&tail)
     }
 
@@ -489,6 +490,18 @@ fn read_exact<R: Read>(r: &mut R, buf: &mut [u8]) -> Result<(), Error> {
     })
 }
 
+/// Packet content for a wire trace (`-vv`). The handshake response carries
+/// the pager's access password in plain text and the access checks carry
+/// its MD5, so for those opcodes only the length is shown.
+fn trace_content(opcode: &Opcode, content: &[u8]) -> String {
+    match *opcode {
+        op::HANDSHAKE | op::ACCESS_PASSWORD_READ | op::ACCESS_PASSWORD_WRITE if !content.is_empty() => {
+            format!("<{} bytes redacted>", content.len())
+        }
+        _ => hex(content),
+    }
+}
+
 fn be_uint(bytes: &[u8]) -> u32 {
     bytes.iter().take(4).fold(0u32, |a, b| (a << 8) | *b as u32)
 }
@@ -519,6 +532,18 @@ pub fn parse_listing(data: &[u8]) -> Result<Vec<DirEntry>, Error> {
 mod tests {
     use super::*;
     use std::collections::VecDeque;
+
+    #[test]
+    fn wire_trace_hides_credentials() {
+        let secret = b"0123456789ABCDEF0123456789ABCDEF";
+        for opcode in [op::HANDSHAKE, op::ACCESS_PASSWORD_READ, op::ACCESS_PASSWORD_WRITE] {
+            let shown = trace_content(&opcode, secret);
+            assert_eq!(shown, "<32 bytes redacted>");
+            assert!(!shown.contains(&hex(&secret[..4])));
+        }
+        assert_eq!(trace_content(&op::READ_FILE, &[0xAB, 0xCD]), hex(&[0xAB, 0xCD]));
+        assert_eq!(trace_content(&op::HANDSHAKE, &[]), hex(&[]));
+    }
 
     /// Feeds scripted pager bytes; records what the client sent.
     struct Mock {
