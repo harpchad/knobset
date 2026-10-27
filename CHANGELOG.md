@@ -25,6 +25,12 @@ All notable changes to Knobset are documented here. The format follows
 - `osv-scanner.toml` records six dependency advisories as reviewed, each
   with its reason and a review date: five Linux-only, plus `block-buffer`
   0.10, which release builds can't reach because they abort on panic.
+- GOVERNANCE.md, CODE_OF_CONDUCT.md (Contributor Covenant 2.1),
+  ROADMAP.md, ARCHITECTURE.md, a security assurance case
+  (`notes/assurance-case.md`), a Quick start in the README, and the
+  vulnerability response process in SECURITY.md.
+- Tests that zip and MSI template imports refuse paths escaping their
+  folder and zip symlinks.
 - The OpenSSF Best Practices badge (passing), plus release and license
   badges, at the top of the README.
 - CodeRabbit reviews pull requests (`.coderabbit.yaml`). It comments and

@@ -2,6 +2,9 @@
 
 Bug reports, pager test results and pull requests are welcome. Knobset
 writes to real hardware, so a few rules here are stricter than usual.
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md);
+[GOVERNANCE.md](GOVERNANCE.md) explains who decides what, and
+[ARCHITECTURE.md](ARCHITECTURE.md) is the map of the code.
 
 ## Reporting a problem
 

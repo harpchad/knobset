@@ -267,9 +267,12 @@ Defender's ML verdicts much less likely. Two routes:
   Basic.** The publisher is Chad's name, after identity validation. Tauri
   supports it through a custom `signCommand`.
 
-SignPath is the one to try first: it costs nothing, and the publisher
-name matters less than the warning going away. Linux packages are
-routinely unsigned; a signed apt repository isn't worth it at this size.
+SignPath probably isn't an option for Knobset (Chad, 2026-10-27), so the
+choice is Azure Artifact Signing or staying unsigned, which is on the
+[roadmap](../ROADMAP.md). Until then, `SHA256SUMS.txt` and the Sigstore
+attestations are how users verify the Windows installers. Linux packages
+are routinely unsigned; a signed apt repository isn't worth it at this
+size.
 
 ## Where the app keeps things
 
