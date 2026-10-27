@@ -8,7 +8,10 @@ can take part through issues and pull requests.
 
 **Maintainer** (currently one person):
 
-- Reviews and merges pull requests. Nothing reaches `main` without one.
+- Reviews and merges pull requests. Nothing reaches `main` without one,
+  and a ruleset requires an approval from someone other than the last
+  pusher plus passing tests. The maintainer can bypass that, only
+  through a pull request, when no other reviewer is available.
 - Triages issues and answers questions.
 - Receives and handles private vulnerability reports (see
   [SECURITY.md](SECURITY.md)).

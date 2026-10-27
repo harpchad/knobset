@@ -89,6 +89,12 @@ cd fuzz && cargo +nightly fuzz run frame   # or pager_responses, rr_import
 - Keep each PR to one change. A PR that also reformats unrelated code is
   hard to review.
 
+To merge, a PR needs an approving review from someone other than whoever
+pushed its last commit (CodeRabbit's automated review counts), a passing
+"Test and clippy" check, and to be up to date with `main`. Review
+comments get answered or fixed first. The maintainer can bypass these
+rules, but only by merging through a PR, never by pushing to `main`.
+
 By contributing, you agree that your contribution is licensed under the
 [Mozilla Public License 2.0](LICENSE), the same as the rest of Knobset.
 

@@ -3,8 +3,10 @@
 #
 # Everything that lets CodeRabbit commit to a branch (finishing touches,
 # CI fixes, conflict resolution) is off: it reviews, comments and approves.
-# Its approval is a review signal (and what Scorecard's Code-Review check
-# counts), not a merge gate: main's ruleset requires no approvals.
+# main's ruleset requires one approval from someone other than the last
+# pusher, so its approval is what normally lets a PR merge. The
+# maintainer can bypass it, only through a PR, when CodeRabbit doesn't
+# approve. It's an automated review, not human code review.
 language: en-US
 tone_instructions: >-
   Be brief and specific. Flag real bugs, security issues and broken
@@ -15,14 +17,32 @@ early_access: false
 reviews:
   profile: chill
   # Approve once its threads are resolved and the latest commit is
-  # reviewed, up to moderate merge and security risk; request changes for
-  # blocking findings. Stricter for pager writes and workflows.
+  # reviewed, up to moderate merge risk; request changes for blocking
+  # findings. A security-risk limit only approves commits that got a
+  # security assessment, and docs-only commits get none, so the limit is
+  # set per path instead of globally: any PR touching code, build, CI,
+  # .gitignore or this file needs an assessment at or under the limit (low for
+  # workflows), while a docs-only PR is judged on merge risk alone.
+  # Overrides only tighten; the strictest matching value wins.
   auto_approvals:
     enabled: true
     allow_author_approval: false
     max_merge_risk: moderate
-    max_security_risk: moderate
     overrides:
+      - paths:
+          - "crates/**"
+          - "app/**"
+          - "fuzz/**"
+          - "scripts/**"
+          - ".github/**"
+          - "Cargo.toml"
+          - "Cargo.lock"
+          - "osv-scanner.toml"
+          - ".coderabbit.yaml"
+          # Keeps pager backups, Unication files and RadioReference data
+          # out of git.
+          - "**/.gitignore"
+        max_security_risk: moderate
       - paths: ["crates/g5-codeplug/**", "crates/g5-core/**"]
         max_merge_risk: low
       - paths: [".github/workflows/**"]

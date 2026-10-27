@@ -20,7 +20,8 @@ All notable changes to Knobset are documented here. The format follows
 - Weekly fuzzing (cargo-fuzz) of the pager frame and response parsers and
   the RadioReference import.
 - Tests and clippy run on every pull request, docs-only ones included,
-  and on every push to `main`.
+  and on every push to `main`. Merging to `main` now needs one approving
+  review, a passing "Test and clippy" check and an up-to-date branch.
 - CodeQL code scanning and an OpenSSF Scorecard workflow, both reporting
   to the Security tab. GitHub Actions are now updated by Dependabot, and
   every action is pinned to a commit SHA.
