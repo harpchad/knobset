@@ -13,15 +13,19 @@ ads or telemetry, and it never connects to the internet.
   installer.
 - **Settings**: those folders and the pager's address.
 
-Knobset doesn't send any of this anywhere. Deleting the app (and, on a
-Mac, Linux or Windows, its data folder) removes it.
+Knobset doesn't send any of this anywhere. On an iPad, deleting the app
+removes all of it. On a Mac, Linux or Windows, delete the app's data folder
+too, and any backups folder you picked yourself in Settings: Knobset never
+deletes a folder you chose.
 
 ## The only connection
 
 Knobset talks to one address: the pager itself, at `10.10.0.12`, over the
 pager's USB cable. That's why the iPad asks for Local Network access. The
 pager's access password, if it has one, is checked with the pager and
-never stored, logged or shown.
+never stored, logged or shown by Knobset. The pager's own protocol sends
+it unencrypted over the USB cable, as it does with Unication's software,
+so use a password you don't use anywhere else.
 
 ## Others who handle your data
 
