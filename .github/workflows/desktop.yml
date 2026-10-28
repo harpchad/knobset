@@ -117,6 +117,15 @@ jobs:
             files: |
               target/release/bundle/appimage/*.AppImage
               target/release/bundle/deb/*.deb
+          # Same glibc floor; runs on ARM machines such as a Raspberry Pi 4
+          # or 5 and Linux VMs on Apple silicon.
+          - name: Linux ARM
+            os: ubuntu-22.04-arm
+            bundles: appimage,deb
+            artifact: linux-arm64
+            files: |
+              target/release/bundle/appimage/*.AppImage
+              target/release/bundle/deb/*.deb
           - name: Windows
             os: windows-latest
             bundles: nsis

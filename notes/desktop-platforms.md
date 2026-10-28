@@ -12,7 +12,9 @@ hardware yet.
 | OS | Runner | Artifacts | Floor |
 |---|---|---|---|
 | Linux x86_64 | `ubuntu-22.04` | `Knobset_<v>_amd64.AppImage`, `Knobset_<v>_amd64.deb` | glibc 2.35 and WebKitGTK 4.1 (Ubuntu 22.04, Debian 12, Fedora 36 or newer) |
+| Linux ARM64 | `ubuntu-22.04-arm` | `Knobset_<v>_aarch64.AppImage`, `Knobset_<v>_arm64.deb` | The same as x86_64 |
 | Windows x64 | `windows-latest` | `Knobset_<v>_x64-setup.exe` (NSIS) | Windows 10 1903 or later with WebView2 (Windows 11 ships it) |
+| Windows ARM64 | `windows-11-arm` | `Knobset_<v>_arm64-setup.exe` (NSIS) | Windows 11 on ARM |
 
 When it runs:
 
@@ -46,7 +48,8 @@ No MSI: NSIS installs per user without admin rights, and nobody deploys
 Knobset with Group Policy. Adding `msi` to the Windows `bundles` is all it
 takes if that changes. Windows on ARM gets a native installer from the
 `windows-11-arm` runner (free on public repos); it would also run the x64
-one under emulation. No Linux ARM build yet.
+one under emulation. Linux on ARM gets its AppImage and .deb from the
+`ubuntu-22.04-arm` runner, also free on public repos.
 
 ## The pager's USB link
 
@@ -250,8 +253,9 @@ prompt.
 - **Linux AppImage.** `chmod +x Knobset_*.AppImage` and run it. It needs
   FUSE 2 (`libfuse2`, or `libfuse2t64` on Ubuntu 24.04 and later); without
   it, run it with `--appimage-extract-and-run`.
-- **Linux .deb.** `sudo apt install ./Knobset_*_amd64.deb`, which pulls in
-  WebKitGTK 4.1. It puts Knobset in the applications menu.
+- **Linux .deb.** `sudo apt install ./Knobset_*_amd64.deb` (`_arm64.deb`
+  on ARM), which pulls in WebKitGTK 4.1. It puts Knobset in the
+  applications menu.
 - On some NVIDIA and Wayland setups WebKitGTK draws a blank window; start
   it with `WEBKIT_DISABLE_DMABUF_RENDERER=1`.
 

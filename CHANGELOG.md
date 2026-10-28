@@ -8,6 +8,9 @@ All notable changes to Knobset are documented here. The format follows
 
 ### Added
 
+- Linux builds for 64-bit ARM: an `aarch64` AppImage and an `arm64` .deb,
+  for a Raspberry Pi 4 or 5 or a Linux VM on Apple silicon. Not yet run
+  against a pager.
 - Screenshots in the README, made from the app's demo data by
   `scripts/screenshots/capture.py`, which also draws the GitHub social
   preview card.
