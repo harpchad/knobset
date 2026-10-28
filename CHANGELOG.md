@@ -19,6 +19,13 @@ All notable changes to Knobset are documented here. The format follows
 - A public TestFlight link for the iPad beta, in the README. Anyone can
   join; build 0.6.2 passed Beta App Review on 2026-10-28.
 
+### Fixed
+
+- Drop-down menus in dark mode on Linux showed light text on a light box,
+  so the selected system or mode looked blank. The page now tells the
+  web view it's dark, so WebKitGTK (and WebView2 on Windows) draws its
+  native controls dark too.
+
 ## [0.6.2] - 2026-10-27
 
 A security fix for the command-line tool, Windows on ARM support that
