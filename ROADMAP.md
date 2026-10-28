@@ -7,11 +7,8 @@ October 2027. Priorities can shift with what testers report; the
 ## Next (0.7)
 
 - Finish the on-pager test plan (`notes/pager-test-plan.md`, steps 15 to
-  36): talkgroup settings, pager settings, cloning, knob copy and move.
+  34): talkgroup settings, pager settings, cloning, knob copy and move.
 - Verify P25 conventional on a pager, and DMR audio on a local repeater.
-- Test on real Linux and Windows x64 machines, including Unication's
-  RNDIS driver on Windows 11.
-- A public TestFlight link for the iPad app.
 - Windows code signing: decide whether Azure Artifact Signing ($9.99 a
   month) is worth it. Until then, the installers stay unsigned, and
   `SHA256SUMS.txt` and the Sigstore attestations are how to verify them.
