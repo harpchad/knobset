@@ -125,6 +125,8 @@ Step 11 (DMR audio on the local ham repeater) is still open from the 0.5 run.
 | 13 | Pass | Pager B |
 | 14 | Pass | Pager B, covered before the step was run on purpose |
 | 15 to 34 | Not run | Steps 30 to 34 needed 1.41e support once pager C was updated |
+| 35 | Not run | No Linux machine yet |
+| 36 | Partly run | Windows 11 on ARM (UTM VM on the Studio, pager C passed through over USB), ARM64 build of 0.6.1: installer, `install-rndis.ps1` bringing up the link, template import from `PPS_Setup.msi`, a backup identical to the Mac's, and a knob rename (Metro knob 5) written and verified after the reboot. Still open: x64 Windows with Unication's RNDIS driver, and renaming that knob back |
 
 Also on 2026-10-25:
 
