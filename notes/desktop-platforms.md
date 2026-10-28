@@ -48,7 +48,8 @@ No MSI: NSIS installs per user without admin rights, and nobody deploys
 Knobset with Group Policy. Adding `msi` to the Windows `bundles` is all it
 takes if that changes. Windows on ARM gets a native installer from the
 `windows-11-arm` runner (free on public repos); it would also run the x64
-one under emulation. No Linux ARM build yet.
+one under emulation. Linux on ARM gets its AppImage and .deb from the
+`ubuntu-22.04-arm` runner, also free on public repos.
 
 ## The pager's USB link
 

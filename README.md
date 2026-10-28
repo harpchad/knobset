@@ -129,8 +129,8 @@ from the same release, or the `aarch64` AppImage or `arm64` .deb for ARM
 machines (a Raspberry Pi 4 or 5 with a 64-bit OS, or a Linux VM on Apple
 silicon). All of them need glibc 2.35 and WebKitGTK 4.1 (Ubuntu 22.04,
 Debian 12, Fedora 36 or newer). Install the .deb with
-`sudo apt install ./Knobset_<version>_amd64.deb`, or `chmod +x` the
-AppImage and run it (it needs `libfuse2`, `libfuse2t64` on Ubuntu 24.04).
+`sudo apt install ./Knobset_<version>_amd64.deb` (`_arm64.deb` on ARM), or
+`chmod +x` the AppImage and run it (it needs `libfuse2`, `libfuse2t64` on Ubuntu 24.04).
 
 Plug in the pager: the kernel's `cdc_ether` driver binds it and
 NetworkManager gets an address from it by DHCP, so there's nothing to
