@@ -1,4 +1,4 @@
-# Knobset
+# <img src="docs/images/icon.png" width="40" align="top" alt=""> Knobset
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15986/badge)](https://www.bestpractices.dev/projects/15986) [![Latest release](https://img.shields.io/github/v/release/harpchad/knobset)](https://github.com/harpchad/knobset/releases/latest) [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
 
@@ -13,6 +13,13 @@ and V2.05 tested): back up, browse zones, knobs, systems and talkgroups, rename
 knobs and edit a knob's talkgroup list, create and edit P25 systems (or
 import them from RadioReference), then write to the pager with a safety
 backup and byte-for-byte read-back verification.
+
+![The knob editor: zone Metro with five knobs, and knob 1's three talkgroups](docs/images/zones.png)
+
+<img src="docs/images/systems.png" width="49%" alt="A P25 system's control channels and talkgroup table"> <img src="docs/images/write.png" width="49%" alt="The write dialog: two knob renames, four checks passed, and a note about the safety backup and read-back">
+
+The screenshots use the app's built-in demo data; the pager, serial and
+talkgroups are made up.
 
 ## Quick start
 
@@ -235,6 +242,14 @@ one-time setup is in the script's header.
 `app/src-tauri/icons/app-icon.svg` is the master. After editing it, run
 `scripts/icons/generate.sh`, which regenerates every size, strips alpha from
 the iOS icons and builds `icon.icns` from a macOS-shaped variant.
+
+## Screenshots
+
+`scripts/screenshots/capture.py` regenerates the README screenshots and the
+social preview card in `docs/images/` from the browser build's demo data.
+Run `npm run dev` in `app/` first; the script's docstring has the details.
+After changing `social-preview.png`, upload it in the repository's
+Settings, under Social preview.
 
 ## Contributing
 
