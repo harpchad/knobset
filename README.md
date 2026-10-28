@@ -112,7 +112,9 @@ over USB.
 
 ## Installing on iPad
 
-Knobset for iPad is in beta on TestFlight; a public link is coming soon.
+Knobset for iPad is in beta on TestFlight: install the TestFlight app,
+then open [testflight.apple.com/join/jpmSCxN7](https://testflight.apple.com/join/jpmSCxN7)
+on the iPad.
 It needs iPadOS 16.4 or later and an iPad with USB-C. Plug the pager in
 directly or through a USB-C hub: iPadOS sees it as an Ethernet adapter, so
 there's nothing to install. The first time you connect, allow Knobset to

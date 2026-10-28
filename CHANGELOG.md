@@ -16,6 +16,8 @@ All notable changes to Knobset are documented here. The format follows
   preview card.
 - `PRIVACY.md`: Knobset collects nothing; what stays on the device, and
   what TestFlight, GitHub and email handle.
+- A public TestFlight link for the iPad beta, in the README. Anyone can
+  join; build 0.6.2 passed Beta App Review on 2026-10-28.
 
 ### Changed
 
