@@ -17,6 +17,13 @@ All notable changes to Knobset are documented here. The format follows
 - `PRIVACY.md`: Knobset collects nothing; what stays on the device, and
   what TestFlight, GitHub and email handle.
 
+### Fixed
+
+- Drop-down menus in dark mode on Linux showed light text on a light box,
+  so the selected system or mode looked blank. The page now tells the
+  web view it's dark, so WebKitGTK (and WebView2 on Windows) draws its
+  native controls dark too.
+
 ## [0.6.2] - 2026-10-27
 
 A security fix for the command-line tool, Windows on ARM support that
