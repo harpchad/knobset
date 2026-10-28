@@ -6,6 +6,12 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Screenshots in the README, made from the app's demo data by
+  `scripts/screenshots/capture.py`, which also draws the GitHub social
+  preview card.
+
 ## [0.6.2] - 2026-10-27
 
 A security fix for the command-line tool, Windows on ARM support that
