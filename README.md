@@ -5,8 +5,8 @@
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
 trunking scanner. Runs on macOS, iPad, Linux and Windows. Linux x64 and
-Windows on ARM have backed up and written a pager; Windows x64 and Linux
-on ARM haven't been tried against one yet.
+Windows (x64 and ARM) have backed up and written a pager; Linux on ARM
+hasn't been tried against one yet.
 
 Status: early. Works on DBV1.41b to DBV1.41e pagers (firmware V1.33, V2.02
 and V2.05 tested): back up, browse zones, knobs, systems and talkgroups, rename
@@ -159,10 +159,11 @@ They aren't signed yet, so Windows warns about them:
   Protection history (Actions › Allow on device). Don't add a folder
   exclusion.
 
-Windows on x64 needs Unication's RNDIS driver for the pager's USB link. It
-ships inside PPS's setup and as Unication's separate "Windows RNDIS driver
-setup" download. Once it's in, `ipconfig` shows a "USB Remote NDIS Network
-Device" adapter on `10.10.0.x`.
+Windows on x64 needs Unication's RNDIS driver for the pager's USB link:
+without it, Device Manager lists the pager as "USB Serial Device" under
+Ports. The driver ships inside PPS's setup and as Unication's separate
+"Windows RNDIS driver setup" download. Once it's in, `ipconfig` shows a
+"Unication USB Ethernet/RNDIS" adapter on `10.10.0.x`.
 
 Unication's driver doesn't install on Windows on ARM, and Device Manager
 can't pick Windows' own Remote NDIS driver for the pager either. Instead,

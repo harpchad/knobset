@@ -150,8 +150,10 @@ for. If yours differs, use what `ip link` shows.
 Windows has no in-box CDC-ECM driver (Windows 11's USB networking class
 driver is CDC-NCM, which doesn't apply), so the pager needs its RNDIS side.
 The in-box RNDIS driver evidently doesn't claim the pager on its own, or
-Unication wouldn't ship an INF for it. Without a driver, expect it under
-Other devices in Device Manager with a warning icon.
+Unication wouldn't ship an INF for it. Without a driver, Windows 11 binds
+it to `usbser.inf` as "USB Serial Device (COM3)", on x64 the same as on
+ARM (see below), and Knobset can't reach it. Older Windows may list it
+under Other devices with a warning icon instead.
 
 Unication's driver package fixes that. It's in both of Unication's
 downloads: the standalone `unication_windows_rndis_driver_setup.zip`, and
@@ -170,6 +172,11 @@ Manager before installing the driver again. What's in it, checked in the extract
 - `dpinst.exe`, Microsoft's driver installer, which the setup wraps.
 - Decorations for x86 and x64 only. On Windows on ARM the INF won't match;
   see below.
+
+On x64 Windows 11 the setup is a three-page wizard (Welcome, Next,
+Finish) with no signature prompt; the setup exe itself is unsigned. With
+the pager plugged in, it rebinds the pager straight away as "Unication
+USB Ethernet/RNDIS", with no re-plug, and DHCP gives it 10.10.0.6/16.
 
 #### Windows on ARM
 
@@ -338,6 +345,20 @@ AppImage on 2026-10-28:
   pager's menu, which any write from the profile resets
   ([`firmware-update.md`](firmware-update.md)).
 
+Windows 11 on x64 (Enterprise evaluation, build 26300), in a KVM VM on
+the same laptop with pager C passed through over USB, running the x64
+build of 0.6.2 on 2026-10-28:
+
+- the installer, run silently (`/S`) from a local copy, so SmartScreen
+  never came up, and the app in WebView2;
+- Unication's driver setup, then the pager's link;
+- template import from `PPS_Setup.msi`;
+- a backup, byte-identical to the Mac's backup of the same pager that
+  morning;
+- a knob rename written and confirmed on the display, then renamed back.
+  Each write changed only that knob's name rows, and the last backup
+  matches the first table for table.
+
 Windows 11 on ARM, in a UTM VM on Apple silicon with pager C passed
 through over USB, running the ARM64 build of 0.6.1:
 
@@ -354,8 +375,7 @@ Nobody has yet:
 
 - installed the .deb, or run either ARM Linux build;
 - brought the link up under systemd-networkd instead of NetworkManager;
-- run the x64 Windows build on x64 hardware, or used Unication's driver on
-  Windows 11;
+- run either Windows build outside a VM, or on Windows 10;
 - used "Show in file manager" or the folder pickers on Linux or Windows
   (only the Linux file picker has run);
 - opened a backup under a non-ASCII Windows user name (the UTF-8 code page
