@@ -81,8 +81,10 @@ ip -br addr        # expect something like: enxbe6e3b3e6f6b  UP  10.10.0.6/16
 ping -c 3 10.10.0.12
 ```
 
-The interface is usually named `enx` plus the MAC (`enxbe6e3b3e6f6b`),
-sometimes `usb0`. `dmesg | grep -i cdc_ether` shows the bind.
+Debian and Ubuntu name the interface `enx` plus the MAC
+(`enxbe6e3b3e6f6b`). Arch has no MAC naming rule, so it uses the USB path
+(`enp0s20f0u11`), and a few systems call it `usb0`.
+`dmesg | grep -i cdc_ether` shows the bind.
 
 With NetworkManager (every desktop distro), the device shows up as a new
 wired connection and gets its address by DHCP on its own. Gotchas:
@@ -148,8 +150,10 @@ for. If yours differs, use what `ip link` shows.
 Windows has no in-box CDC-ECM driver (Windows 11's USB networking class
 driver is CDC-NCM, which doesn't apply), so the pager needs its RNDIS side.
 The in-box RNDIS driver evidently doesn't claim the pager on its own, or
-Unication wouldn't ship an INF for it. Without a driver, expect it under
-Other devices in Device Manager with a warning icon.
+Unication wouldn't ship an INF for it. Without a driver, Windows 11 binds
+it to `usbser.inf` as "USB Serial Device (COM3)", on x64 the same as on
+ARM (see below), and Knobset can't reach it. Older Windows may list it
+under Other devices with a warning icon instead.
 
 Unication's driver package fixes that. It's in both of Unication's
 downloads: the standalone `unication_windows_rndis_driver_setup.zip`, and
@@ -168,6 +172,11 @@ Manager before installing the driver again. What's in it, checked in the extract
 - `dpinst.exe`, Microsoft's driver installer, which the setup wraps.
 - Decorations for x86 and x64 only. On Windows on ARM the INF won't match;
   see below.
+
+On x64 Windows 11 the setup is a three-page wizard (Welcome, Next,
+Finish) with no signature prompt; the setup exe itself is unsigned. With
+the pager plugged in, it rebinds the pager straight away as "Unication
+USB Ethernet/RNDIS", with no re-plug, and DHCP gives it 10.10.0.6/16.
 
 #### Windows on ARM
 
@@ -321,6 +330,35 @@ remove any of this.
 
 ## What's been checked on real hardware
 
+Linux on x64, an Arch-based laptop (Omarchy: kernel 7.1, glibc 2.44,
+Hyprland on Wayland, WebKitGTK 2.54) with pager A, running the 0.6.2
+AppImage on 2026-10-28:
+
+- the AppImage with `--appimage-extract-and-run`, since Arch doesn't
+  install `fuse2` by default, and the UI in WebKitGTK;
+- the pager's link: `cdc_ether` bound it, and NetworkManager gave it
+  10.10.0.6/16 by DHCP with no setup;
+- template import from `PPS_Setup.msi` through the file picker;
+- a backup, then a knob rename written and read back, then renamed back.
+  The last backup's profile and stored PC DB match the first one table for
+  table. The live DB differs only in the backlight setting changed on the
+  pager's menu, which any write from the profile resets
+  ([`firmware-update.md`](firmware-update.md)).
+
+Windows 11 on x64 (Enterprise evaluation, build 26300), in a KVM VM on
+the same laptop with pager C passed through over USB, running the x64
+build of 0.6.2 on 2026-10-28:
+
+- the installer, run silently (`/S`) from a local copy, so SmartScreen
+  never came up, and the app in WebView2;
+- Unication's driver setup, then the pager's link;
+- template import from `PPS_Setup.msi`;
+- a backup, byte-identical to the Mac's backup of the same pager that
+  morning;
+- a knob rename written and confirmed on the display, then renamed back.
+  Each write changed only that knob's name rows, and the last backup
+  matches the first table for table.
+
 Windows 11 on ARM, in a UTM VM on Apple silicon with pager C passed
 through over USB, running the ARM64 build of 0.6.1:
 
@@ -335,12 +373,10 @@ through over USB, running the ARM64 build of 0.6.1:
 
 Nobody has yet:
 
-- installed or run either Linux build, or seen the UI in WebKitGTK;
-- brought the pager's link up on Linux (`cdc_ether` binding, NetworkManager
-  DHCP);
-- run the x64 Windows build on x64 hardware, or used Unication's driver on
-  Windows 11;
-- used "Show in file manager" or the folder pickers on Linux or Windows;
+- installed the .deb, or run either ARM Linux build;
+- brought the link up under systemd-networkd instead of NetworkManager;
+- run either Windows build outside a VM, or on Windows 10;
+- used "Show in file manager" or the folder pickers on Linux or Windows
+  (only the Linux file picker has run);
 - opened a backup under a non-ASCII Windows user name (the UTF-8 code page
-  fix is untested);
-- checked that the AppImage runs on a distro newer than Ubuntu 22.04.
+  fix is untested).

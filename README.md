@@ -4,9 +4,9 @@
 
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
-trunking scanner. Runs on macOS, iPad, Linux and Windows. Windows on ARM
-has backed up and written a pager; Linux and Windows x64 haven't been
-tried against one yet.
+trunking scanner. Runs on macOS, iPad, Linux and Windows. Linux x64 and
+Windows (x64 and ARM) have backed up and written a pager; Linux on ARM
+hasn't been tried against one yet.
 
 Status: early. Works on DBV1.41b to DBV1.41e pagers (firmware V1.33, V2.02
 and V2.05 tested): back up, browse zones, knobs, systems and talkgroups, rename
@@ -132,13 +132,15 @@ machines (a Raspberry Pi 4 or 5 with a 64-bit OS, or a Linux VM on Apple
 silicon). All of them need glibc 2.35 and WebKitGTK 4.1 (Ubuntu 22.04,
 Debian 12, Fedora 36 or newer). Install the .deb with
 `sudo apt install ./Knobset_<version>_amd64.deb` (`_arm64.deb` on ARM), or
-`chmod +x` the AppImage and run it (it needs `libfuse2`, `libfuse2t64` on Ubuntu 24.04).
+`chmod +x` the AppImage and run it. The AppImage needs FUSE 2 (`libfuse2`,
+`libfuse2t64` on Ubuntu 24.04, `fuse2` on Arch); without it, start it with
+`--appimage-extract-and-run`.
 
 Plug in the pager: the kernel's `cdc_ether` driver binds it and
 NetworkManager gets an address from it by DHCP, so there's nothing to
-install. `ip -br addr` should show an `enx…` interface on `10.10.0.x`. If
-`nmcli device status` lists it as unmanaged, or the machine runs
-systemd-networkd instead, see
+install. `ip -br addr` should show an `enx…` interface (`enp…u…` on Arch)
+on `10.10.0.x`. If `nmcli device status` lists it as unmanaged, or the
+machine runs systemd-networkd instead, see
 [`notes/desktop-platforms.md`](notes/desktop-platforms.md).
 
 ## Installing on Windows
@@ -159,10 +161,11 @@ They aren't signed yet, so Windows warns about them:
   Protection history (Actions › Allow on device). Don't add a folder
   exclusion.
 
-Windows on x64 needs Unication's RNDIS driver for the pager's USB link. It
-ships inside PPS's setup and as Unication's separate "Windows RNDIS driver
-setup" download. Once it's in, `ipconfig` shows a "USB Remote NDIS Network
-Device" adapter on `10.10.0.x`.
+Windows on x64 needs Unication's RNDIS driver for the pager's USB link:
+without it, Device Manager lists the pager as "USB Serial Device" under
+Ports. The driver ships inside PPS's setup and as Unication's separate
+"Windows RNDIS driver setup" download. Once it's in, `ipconfig` shows a
+"Unication USB Ethernet/RNDIS" adapter on `10.10.0.x`.
 
 Unication's driver doesn't install on Windows on ARM, and Device Manager
 can't pick Windows' own Remote NDIS driver for the pager either. Instead,

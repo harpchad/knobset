@@ -19,6 +19,15 @@ All notable changes to Knobset are documented here. The format follows
 - A public TestFlight link for the iPad beta, in the README. Anyone can
   join; build 0.6.2 passed Beta App Review on 2026-10-28.
 
+### Changed
+
+- The x64 Linux AppImage and the x64 Windows installer have now run
+  against a pager (0.6.2 on Arch with Wayland, and on Windows 11 with
+  Unication's driver): link, template import, backup and a knob write
+  all work. The notes cover Arch's `enp…u…` interface name, running the
+  AppImage without FUSE 2, and the "USB Serial Device" binding Windows
+  shows before the driver is installed.
+
 ### Fixed
 
 - Drop-down menus in dark mode on Linux showed light text on a light box,

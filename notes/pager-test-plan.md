@@ -114,10 +114,10 @@ Step 11 (DMR audio on the local ham repeater) is still open from the 0.5 run.
 | 32 | Clone preview | `g5 clone <B's newest backup> --target <C's newest backup>` (no `--yes`) | A plan: what changes on C and the identity fields C keeps | No pager needed |
 | 33 | Clone B onto C | Plug in C, back it up, then Write to another pager from B's newest backup | C shows B's zones and knobs and still says User-001; C's profile matches B's and its radio DB matches B's profile converted for 1.41e | C is on 1.41e now, so the radio DB is regenerated for it (the dialog says so) and won't match B's byte for byte |
 | 34 | C after the clone | Check C's trunked knobs, then rename a knob on C and write | Knobs receive and the normal write path works on C | Restore C's safety backup afterwards if you want C back |
-| 35 | Linux | Install the .deb or AppImage from a release; plug in a pager | `ip -br addr` shows an `enx...` interface on 10.10.0.x; back up, then rename one knob and write | Needs a Linux machine |
-| 36 | Windows | Run the installer (SmartScreen: More info, Run anyway); plug in a pager | If it shows under Other devices, install Unication's RNDIS driver; `ipconfig` shows 10.10.0.x; back up, rename, write | Needs a Windows machine |
+| 35 | Linux | Install the .deb or AppImage from a release; plug in a pager | `ip -br addr` shows an `enx...` interface (`enp...u...` on Arch) on 10.10.0.x; back up, then rename one knob and write | Needs a Linux machine |
+| 36 | Windows | Run the installer (SmartScreen: More info, Run anyway); plug in a pager | If it shows as USB Serial Device (COM3) or under Other devices, install Unication's RNDIS driver (x64) or run `install-rndis.ps1` (ARM); `ipconfig` shows 10.10.0.x; back up, rename, write | Needs a Windows machine |
 
-## Results (0.6, 2026-10-20 to 2026-10-25)
+## Results (0.6, 2026-10-20 to 2026-10-28)
 
 | # | Result | Notes |
 |---|---|---|
@@ -125,8 +125,8 @@ Step 11 (DMR audio on the local ham repeater) is still open from the 0.5 run.
 | 13 | Pass | Pager B |
 | 14 | Pass | Pager B, covered before the step was run on purpose |
 | 15 to 34 | Not run | Steps 30 to 34 needed 1.41e support once pager C was updated |
-| 35 | Not run | No Linux machine yet |
-| 36 | Partly run | Windows 11 on ARM (UTM VM on the Studio, pager C passed through over USB), ARM64 build of 0.6.1: installer, `install-rndis.ps1` bringing up the link, template import from Unication's installer, a backup identical to the Mac's, and a knob rename (Metro knob 5) written and verified after the reboot. Still open: x64 Windows with Unication's RNDIS driver, and renaming that knob back |
+| 35 | Pass | 2026-10-28, x64 Arch laptop (Wayland), 0.6.2 AppImage, pager A: link up with no setup, template import, backup, knob rename written and renamed back; the profile matches the first backup table for table. The write reset the backlight setting changed on the pager's menu, as PPS's writes do |
+| 36 | Pass | x64: 2026-10-28, Windows 11 x64 in a KVM VM on the Arch laptop, 0.6.2 x64 build installed silently (`/S`) from a local copy, so SmartScreen wasn't tested, pager C: Unication's driver setup turned the COM3 binding into a working RNDIS link with no re-plug, then template import, a backup byte-identical to the Mac's, and a knob rename confirmed on the display and renamed back (last backup matches the first table for table). ARM: Windows 11 on ARM (UTM VM on the Studio, pager C passed through over USB), ARM64 build of 0.6.1: installer, `install-rndis.ps1` bringing up the link, template import from Unication's installer, a backup identical to the Mac's, and a knob rename (Metro knob 5) written and verified after the reboot. Renamed back through the VM on 2026-10-28; a Mac backup afterwards matches the pre-test one table for table. |
 
 Also on 2026-10-25:
 
