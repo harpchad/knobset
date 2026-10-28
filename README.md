@@ -125,8 +125,10 @@ Import installer.
 ## Installing on Linux
 
 Download `Knobset_<version>_amd64.AppImage` or `Knobset_<version>_amd64.deb`
-from the same release. Both need glibc 2.35 and WebKitGTK 4.1 (Ubuntu
-22.04, Debian 12, Fedora 36 or newer). Install the .deb with
+from the same release, or the `aarch64` AppImage or `arm64` .deb for ARM
+machines (a Raspberry Pi 4 or 5 with a 64-bit OS, or a Linux VM on Apple
+silicon). All of them need glibc 2.35 and WebKitGTK 4.1 (Ubuntu 22.04,
+Debian 12, Fedora 36 or newer). Install the .deb with
 `sudo apt install ./Knobset_<version>_amd64.deb`, or `chmod +x` the
 AppImage and run it (it needs `libfuse2`, `libfuse2t64` on Ubuntu 24.04).
 
@@ -197,10 +199,10 @@ Fuzzing needs nightly Rust; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Releasing
 
-A release has the Mac DMG, the Linux AppImage and .deb, the two Windows
-installers (x64 and ARM), a `.sigstore.json` attestation bundle for each
-Linux and Windows installer, the ARM driver script and `SHA256SUMS.txt`,
-plus the iPad build on TestFlight.
+A release has the Mac DMG, the Linux AppImage and .deb (x64 and ARM), the
+two Windows installers (x64 and ARM), a `.sigstore.json` attestation
+bundle for each Linux and Windows installer, the ARM driver script and
+`SHA256SUMS.txt`, plus the iPad build on TestFlight.
 
 1. Merge the release PR (version bump and CHANGELOG).
 2. Create the release and its tag together, with the CHANGELOG section as
