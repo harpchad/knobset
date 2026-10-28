@@ -130,13 +130,15 @@ machines (a Raspberry Pi 4 or 5 with a 64-bit OS, or a Linux VM on Apple
 silicon). All of them need glibc 2.35 and WebKitGTK 4.1 (Ubuntu 22.04,
 Debian 12, Fedora 36 or newer). Install the .deb with
 `sudo apt install ./Knobset_<version>_amd64.deb` (`_arm64.deb` on ARM), or
-`chmod +x` the AppImage and run it (it needs `libfuse2`, `libfuse2t64` on Ubuntu 24.04).
+`chmod +x` the AppImage and run it. The AppImage needs FUSE 2 (`libfuse2`,
+`libfuse2t64` on Ubuntu 24.04, `fuse2` on Arch); without it, start it with
+`--appimage-extract-and-run`.
 
 Plug in the pager: the kernel's `cdc_ether` driver binds it and
 NetworkManager gets an address from it by DHCP, so there's nothing to
-install. `ip -br addr` should show an `enx…` interface on `10.10.0.x`. If
-`nmcli device status` lists it as unmanaged, or the machine runs
-systemd-networkd instead, see
+install. `ip -br addr` should show an `enx…` interface (`enp…u…` on Arch)
+on `10.10.0.x`. If `nmcli device status` lists it as unmanaged, or the
+machine runs systemd-networkd instead, see
 [`notes/desktop-platforms.md`](notes/desktop-platforms.md).
 
 ## Installing on Windows

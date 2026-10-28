@@ -81,8 +81,10 @@ ip -br addr        # expect something like: enxbe6e3b3e6f6b  UP  10.10.0.6/16
 ping -c 3 10.10.0.12
 ```
 
-The interface is usually named `enx` plus the MAC (`enxbe6e3b3e6f6b`),
-sometimes `usb0`. `dmesg | grep -i cdc_ether` shows the bind.
+Debian and Ubuntu name the interface `enx` plus the MAC
+(`enxbe6e3b3e6f6b`). Arch has no MAC naming rule, so it uses the USB path
+(`enp0s20f0u11`), and a few systems call it `usb0`.
+`dmesg | grep -i cdc_ether` shows the bind.
 
 With NetworkManager (every desktop distro), the device shows up as a new
 wired connection and gets its address by DHCP on its own. Gotchas:
@@ -321,6 +323,21 @@ remove any of this.
 
 ## What's been checked on real hardware
 
+Linux on x64, an Arch-based laptop (Omarchy: kernel 7.1, glibc 2.44,
+Hyprland on Wayland, WebKitGTK 2.54) with pager A, running the 0.6.2
+AppImage on 2026-10-28:
+
+- the AppImage with `--appimage-extract-and-run`, since Arch doesn't
+  install `fuse2` by default, and the UI in WebKitGTK;
+- the pager's link: `cdc_ether` bound it, and NetworkManager gave it
+  10.10.0.6/16 by DHCP with no setup;
+- template import from `PPS_Setup.msi` through the file picker;
+- a backup, then a knob rename written and read back, then renamed back.
+  The last backup's profile and stored PC DB match the first one table for
+  table. The live DB differs only in the backlight setting changed on the
+  pager's menu, which any write from the profile resets
+  ([`firmware-update.md`](firmware-update.md)).
+
 Windows 11 on ARM, in a UTM VM on Apple silicon with pager C passed
 through over USB, running the ARM64 build of 0.6.1:
 
@@ -335,12 +352,11 @@ through over USB, running the ARM64 build of 0.6.1:
 
 Nobody has yet:
 
-- installed or run either Linux build, or seen the UI in WebKitGTK;
-- brought the pager's link up on Linux (`cdc_ether` binding, NetworkManager
-  DHCP);
+- installed the .deb, or run either ARM Linux build;
+- brought the link up under systemd-networkd instead of NetworkManager;
 - run the x64 Windows build on x64 hardware, or used Unication's driver on
   Windows 11;
-- used "Show in file manager" or the folder pickers on Linux or Windows;
+- used "Show in file manager" or the folder pickers on Linux or Windows
+  (only the Linux file picker has run);
 - opened a backup under a non-ASCII Windows user name (the UTF-8 code page
-  fix is untested);
-- checked that the AppImage runs on a distro newer than Ubuntu 22.04.
+  fix is untested).

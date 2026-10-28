@@ -17,6 +17,13 @@ All notable changes to Knobset are documented here. The format follows
 - `PRIVACY.md`: Knobset collects nothing; what stays on the device, and
   what TestFlight, GitHub and email handle.
 
+### Changed
+
+- The x64 Linux AppImage has now run against a pager (0.6.2 on Arch with
+  Wayland): link, template import, backup and a knob write all work. The
+  Linux notes cover Arch's `enp…u…` interface name and running the
+  AppImage without FUSE 2.
+
 ## [0.6.2] - 2026-10-27
 
 A security fix for the command-line tool, Windows on ARM support that
