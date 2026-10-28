@@ -14,6 +14,8 @@ All notable changes to Knobset are documented here. The format follows
 - Screenshots in the README, made from the app's demo data by
   `scripts/screenshots/capture.py`, which also draws the GitHub social
   preview card.
+- `PRIVACY.md`: Knobset collects nothing; what stays on the device, and
+  what TestFlight, GitHub and email handle.
 
 ## [0.6.2] - 2026-10-27
 

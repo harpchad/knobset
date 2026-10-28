@@ -263,7 +263,8 @@ backups) and what a change to pager writes needs. Everyone taking part follows t
 as described in [SECURITY.md](SECURITY.md). How decisions are made is in
 [GOVERNANCE.md](GOVERNANCE.md), plans for the year in
 [ROADMAP.md](ROADMAP.md), and the design in
-[ARCHITECTURE.md](ARCHITECTURE.md). For anything else, write to
+[ARCHITECTURE.md](ARCHITECTURE.md). Knobset collects no data; see
+[PRIVACY.md](PRIVACY.md). For anything else, write to
 [hello@knobset.com](mailto:hello@knobset.com).
 
 ## License
