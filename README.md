@@ -4,9 +4,9 @@
 
 A modern, cross-platform replacement for Unication's Windows-only PPS for
 programming G-series pagers, aimed at hobbyists who use a G5 as a P25
-trunking scanner. Runs on macOS, iPad, Linux and Windows. Windows on ARM
-has backed up and written a pager; Linux and Windows x64 haven't been
-tried against one yet.
+trunking scanner. Runs on macOS, iPad, Linux and Windows. Linux x64 and
+Windows on ARM have backed up and written a pager; Windows x64 and Linux
+on ARM haven't been tried against one yet.
 
 Status: early. Works on DBV1.41b to DBV1.41e pagers (firmware V1.33, V2.02
 and V2.05 tested): back up, browse zones, knobs, systems and talkgroups, rename
