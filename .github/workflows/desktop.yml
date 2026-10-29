@@ -209,7 +209,9 @@ jobs:
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          # Its only role is on the certificate profile, not the
+          # subscription, and signing needs nothing more.
+          allow-no-subscriptions: true
 
       # Fetches the client, writes its metadata.json, and a Tauri config
       # overlay that makes sign.ps1 the signCommand for this build only.
