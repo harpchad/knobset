@@ -319,8 +319,9 @@ Microsoft's TSA and stays valid after the certificate expires.
   validation and a new certificate profile.
 
 Linux packages are routinely unsigned; a signed apt repository isn't
-worth it at this size. `SHA256SUMS.txt` and the Sigstore attestations
-cover every platform.
+worth it at this size. `SHA256SUMS.txt` covers every platform, and the
+Sigstore attestations cover the Linux and Windows installers (the Mac DMG
+is notarized instead).
 
 ## Where the app keeps things
 
