@@ -2,8 +2,9 @@
 
 Knobset's Mac DMG and iPad build are made locally and signed
 (`scripts/macos/release.sh`, `scripts/ios/release.sh`). The Linux and
-Windows builds come from GitHub Actions (`.github/workflows/desktop.yml`)
-and are unsigned. This note covers what each OS needs for the pager's USB
+Windows builds come from GitHub Actions (`.github/workflows/desktop.yml`).
+From 0.7 the Windows installers are Authenticode-signed there (see
+Signing below); the Linux packages are unsigned. This note covers what each OS needs for the pager's USB
 link, where the app keeps its files, and what hasn't been checked on real
 hardware yet.
 
@@ -225,7 +226,7 @@ files the link under "Unidentified network" on the Public profile. That's
 fine: Knobset only makes outgoing connections, so Windows Firewall doesn't
 prompt.
 
-## Installing the unsigned builds
+## Installing the builds
 
 - **Windows.** Edge may flag the download as uncommon: … › Keep. Then
   SmartScreen says "Windows protected your PC": More info › Run anyway.
@@ -272,24 +273,55 @@ prompt.
 - On some NVIDIA and Wayland setups WebKitGTK draws a blank window; start
   it with `WEBKIT_DISABLE_DMABUF_RENDERER=1`.
 
-**Signing is Chad's call, later.** Signing removes "Unknown publisher",
-lets SmartScreen reputation attach to a stable identity, and makes
-Defender's ML verdicts much less likely. Two routes:
+## Signing the Windows builds
 
-- **SignPath Foundation (free).** Signs open-source projects at no cost
-  from a GitHub Actions step, after an application and review. The
-  certificate is SignPath's, so Windows shows "SignPath Foundation" as
-  the publisher, and every release needs an approval in their portal.
-- **Azure Artifact Signing (formerly Trusted Signing), $9.99 a month on
-  Basic.** The publisher is Chad's name, after identity validation. Tauri
-  supports it through a custom `signCommand`.
+From 0.7 the Windows installers are signed with Azure Artifact Signing
+(Basic, $9.99 a month; Chad chose it on 2026-10-29 after SignPath fell
+through). The certificate is an individual Public Trust one:
+`CN=Chad Harp, O=Chad Harp, L=Lees Summit, S=mo, C=US`. Artifact Signing
+certificates last three days, so every signature is timestamped by
+Microsoft's TSA and stays valid after the certificate expires.
 
-SignPath probably isn't an option for Knobset (Chad, 2026-10-27), so the
-choice is Azure Artifact Signing or staying unsigned, which is on the
-[roadmap](../ROADMAP.md). Until then, `SHA256SUMS.txt` and the Sigstore
-attestations are how users verify the Windows installers. Linux packages
-are routinely unsigned; a signed apt repository isn't worth it at this
-size.
+- **Where it runs.** The installer jobs in `desktop.yml`, on `v*` tags
+  and manual runs only. PR builds, `build-installers` ones included, stay
+  unsigned.
+- **What's signed.** Tauri calls `scripts/windows/sign.ps1` as its
+  `signCommand` (set by a config overlay only in signing builds), so it
+  covers `knobset.exe`, the NSIS plugins, the uninstaller and the
+  installer. A check step unpacks the installer with 7-Zip and fails the
+  build unless the installer and the `knobset.exe` inside it are signed
+  and timestamped. (Tauri restores the unpatched
+  `target/release/knobset.exe` after bundling, so that copy is unsigned;
+  don't check it.)
+- **The client.** Microsoft's `Microsoft.ArtifactSigning.Client` signtool
+  plugin from NuGet, pinned by version and SHA-256 in the workflow. It's
+  x64-only .NET 8, so the ARM job installs the x64 runtime and runs x64
+  signtool under emulation; that works on `windows-11-arm`.
+- **Credentials.** No secret. The jobs run in the GitHub environment
+  `release` (only `v*` tags and `main`, Chad's approval on every run),
+  and `azure/login` signs in with GitHub OIDC as the app registration
+  `knobset-github-signing` in Chad's personal tenant. Its only federated
+  credential matches this repo's ID-based subject,
+  `repo:harpchad@132304/knobset@1434481621:environment:release` (the repo
+  uses GitHub's immutable-ID subject format, so the name-based
+  `repo:harpchad/knobset:…` form is rejected). Its only role is Artifact
+  Signing Certificate Profile Signer on the `knobset-public` profile: it
+  can sign, and can't manage anything or see the subscription.
+- **The environment's variables** (not secrets): `AZURE_CLIENT_ID`,
+  `AZURE_TENANT_ID`, `AZURE_SIGNING_ENDPOINT`
+  (`https://cus.codesigning.azure.net`), `AZURE_SIGNING_ACCOUNT`
+  (`knobsetsigning`), `AZURE_SIGNING_PROFILE` (`knobset-public`).
+- **Reputation.** A signature doesn't switch SmartScreen off. Reputation
+  builds on the signing identity with downloads, so the first signed
+  releases may still warn, now naming Chad Harp as the publisher.
+- **The name.** The identity validation came from the Azure billing
+  account, which has the state as "mo"; changing it means a new
+  validation and a new certificate profile.
+
+Linux packages are routinely unsigned; a signed apt repository isn't
+worth it at this size. `SHA256SUMS.txt` covers every platform, and the
+Sigstore attestations cover the Linux and Windows installers (the Mac DMG
+is notarized instead).
 
 ## Where the app keeps things
 
