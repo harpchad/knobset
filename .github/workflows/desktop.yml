@@ -150,7 +150,9 @@ jobs:
     # Azure's federated credential trusts.
     environment: ${{ startsWith(matrix.os, 'windows') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && 'release' || '' }}
     env:
-      SIGN: ${{ startsWith(matrix.os, 'windows') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
+      # Not plain SIGN: linuxdeploy's AppImage plugin reads that as "GPG-sign
+      # the AppImage", even when it says false.
+      KNOBSET_SIGN: ${{ startsWith(matrix.os, 'windows') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     timeout-minutes: 45
     permissions:
       contents: read
@@ -197,14 +199,14 @@ jobs:
       # The signing client is x64-only .NET 8, so ARM runners get the x64
       # runtime and run it emulated.
       - name: Set up .NET for the signing client
-        if: env.SIGN == 'true'
+        if: env.KNOBSET_SIGN == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 8.0.x
           architecture: x64
 
       - name: Sign in to Azure (GitHub OIDC, no secret)
-        if: env.SIGN == 'true'
+        if: env.KNOBSET_SIGN == 'true'
         uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -216,7 +218,7 @@ jobs:
       # Fetches the client, writes its metadata.json, and a Tauri config
       # overlay that makes sign.ps1 the signCommand for this build only.
       - name: Prepare the signing client
-        if: env.SIGN == 'true'
+        if: env.KNOBSET_SIGN == 'true'
         shell: pwsh
         env:
           ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
@@ -253,14 +255,22 @@ jobs:
         working-directory: app
         run: npx tauri build --bundles ${{ matrix.bundles }} ${TAURI_SIGN_CONFIG:+--config "$TAURI_SIGN_CONFIG"}
 
-      # Fails the build if the app or the installer isn't validly signed and
-      # timestamped (Artifact Signing certificates last three days, so the
-      # timestamp is what keeps a signature valid).
+      # Fails the build if the installer, or the knobset.exe packed inside
+      # it, isn't validly signed and timestamped (Artifact Signing
+      # certificates last three days, so the timestamp is what keeps a
+      # signature valid). Tauri puts the unpatched target/release/knobset.exe
+      # back after bundling, so the copy that matters is the one in the
+      # installer, unpacked here with 7-Zip.
       - name: Check the signatures
-        if: env.SIGN == 'true'
+        if: env.KNOBSET_SIGN == 'true'
         shell: pwsh
         run: |
-          $files = @((Resolve-Path target/release/knobset.exe).Path) + (Get-ChildItem target/release/bundle/nsis/*-setup.exe).FullName
+          $setup = (Get-ChildItem target/release/bundle/nsis/*-setup.exe).FullName
+          $unpacked = Join-Path $env:RUNNER_TEMP installer-contents
+          7z x -y "-o$unpacked" $setup | Out-Null
+          if ($LASTEXITCODE) { throw "7-Zip couldn't unpack $setup" }
+          $files = @($setup) + (Get-ChildItem $unpacked -Recurse -Filter knobset.exe).FullName
+          if ($files.Count -lt 2) { throw "no knobset.exe inside $setup" }
           foreach ($f in $files) {
             $sig = Get-AuthenticodeSignature $f
             "{0}: {1}, {2}, timestamped by {3}" -f (Split-Path $f -Leaf), $sig.Status, $sig.SignerCertificate.Subject, $sig.TimeStamperCertificate.Subject
