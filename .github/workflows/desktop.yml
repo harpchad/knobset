@@ -1,10 +1,11 @@
 # Tests and clippy on every PR and every push to main (a required check);
-# unsigned Linux and Windows installers on v* tags, manual runs, and PRs
-# labelled `build-installers` or touching this file. Tag and manual builds
-# get signed build provenance attestations (`gh attestation verify <file>
-# -R harpchad/knobset`). The signed Mac DMG and the iPad build stay local
-# (scripts/macos, scripts/ios). Installers take 10 to 20 minutes, so they
-# don't build on ordinary PR pushes.
+# Linux and Windows installers on v* tags, manual runs, and PRs labelled
+# `build-installers` or touching this file. Tag and manual builds get signed
+# build provenance attestations (`gh attestation verify <file>
+# -R harpchad/knobset`), and their Windows installers are Authenticode-signed
+# through Azure Artifact Signing (scripts/windows/sign.ps1). The signed Mac
+# DMG and the iPad build stay local (scripts/macos, scripts/ios). Installers
+# take 10 to 20 minutes, so they don't build on ordinary PR pushes.
 #
 # Every action is pinned to a commit SHA, with its version in a comment for
 # Dependabot. dtolnay/rust-toolchain has no version tags (its branches name
@@ -36,6 +37,9 @@ env:
   CARGO_TERM_COLOR: always
   # Release builds use LTO; incremental artifacts only bloat the cache.
   CARGO_INCREMENTAL: 0
+  # Microsoft's Artifact Signing client (a signtool plugin), pinned by hash.
+  SIGNING_CLIENT_VERSION: 1.0.146
+  SIGNING_CLIENT_SHA256: 7761e5d8f31e54b764da21d33cd8b0a2940e1b05526c7dfcb5e94b0431426f70
 
 jobs:
   check:
@@ -140,6 +144,13 @@ jobs:
             artifact: windows-arm64
             files: target/release/bundle/nsis/*-setup.exe
     runs-on: ${{ matrix.os }}
+    # Windows builds on tags and manual runs sign, so they run in the
+    # `release` environment: it holds the Azure IDs (not secrets), only
+    # accepts v* tags and main, waits for approval, and is the only subject
+    # Azure's federated credential trusts.
+    environment: ${{ startsWith(matrix.os, 'windows') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && 'release' || '' }}
+    env:
+      SIGN: ${{ startsWith(matrix.os, 'windows') && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     timeout-minutes: 45
     permissions:
       contents: read
@@ -183,9 +194,76 @@ jobs:
         if: runner.os == 'Windows'
         run: cargo test -p sqlite2 -p g5-proto -p g5-codeplug -p g5-core -p g5-cli
 
+      # The signing client is x64-only .NET 8, so ARM runners get the x64
+      # runtime and run it emulated.
+      - name: Set up .NET for the signing client
+        if: env.SIGN == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.x
+          architecture: x64
+
+      - name: Sign in to Azure (GitHub OIDC, no secret)
+        if: env.SIGN == 'true'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Fetches the client, writes its metadata.json, and a Tauri config
+      # overlay that makes sign.ps1 the signCommand for this build only.
+      - name: Prepare the signing client
+        if: env.SIGN == 'true'
+        shell: pwsh
+        env:
+          ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP artifact-signing
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          $pkg = Join-Path $dir client.zip
+          $v = $env:SIGNING_CLIENT_VERSION
+          Invoke-WebRequest "https://api.nuget.org/v3-flatcontainer/microsoft.artifactsigning.client/$v/microsoft.artifactsigning.client.$v.nupkg" -OutFile $pkg
+          $hash = (Get-FileHash $pkg -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:SIGNING_CLIENT_SHA256) { throw "signing client hash $hash doesn't match the pin" }
+          Expand-Archive $pkg (Join-Path $dir client)
+          $dlib = Join-Path $dir client\bin\x64\Azure.CodeSigning.Dlib.dll
+          $metadata = Join-Path $dir metadata.json
+          # Only the Azure CLI login above may sign; no other credential source.
+          @{
+            Endpoint = $env:ENDPOINT
+            CodeSigningAccountName = $env:ACCOUNT
+            CertificateProfileName = $env:PROFILE
+            ExcludeCredentials = @('ManagedIdentityCredential', 'EnvironmentCredential', 'WorkloadIdentityCredential', 'SharedTokenCacheCredential', 'VisualStudioCredential', 'VisualStudioCodeCredential', 'AzurePowerShellCredential', 'AzureDeveloperCliCredential', 'InteractiveBrowserCredential')
+          } | ConvertTo-Json | Set-Content $metadata
+          $overlay = Join-Path $dir tauri.sign.json
+          @{ bundle = @{ windows = @{ signCommand = @{
+            cmd = 'powershell'
+            args = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $env:GITHUB_WORKSPACE scripts\windows\sign.ps1), '%1')
+          } } } } | ConvertTo-Json -Depth 6 | Set-Content $overlay
+          "KNOBSET_SIGN_DLIB=$dlib" >> $env:GITHUB_ENV
+          "KNOBSET_SIGN_METADATA=$metadata" >> $env:GITHUB_ENV
+          "TAURI_SIGN_CONFIG=$overlay" >> $env:GITHUB_ENV
+
       - name: Build the installer
         working-directory: app
-        run: npx tauri build --bundles ${{ matrix.bundles }}
+        run: npx tauri build --bundles ${{ matrix.bundles }} ${TAURI_SIGN_CONFIG:+--config "$TAURI_SIGN_CONFIG"}
+
+      # Fails the build if the app or the installer isn't validly signed and
+      # timestamped (Artifact Signing certificates last three days, so the
+      # timestamp is what keeps a signature valid).
+      - name: Check the signatures
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: |
+          $files = @((Resolve-Path target/release/knobset.exe).Path) + (Get-ChildItem target/release/bundle/nsis/*-setup.exe).FullName
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature $f
+            "{0}: {1}, {2}, timestamped by {3}" -f (Split-Path $f -Leaf), $sig.Status, $sig.SignerCertificate.Subject, $sig.TimeStamperCertificate.Subject
+            if ($sig.Status -ne 'Valid' -or -not $sig.TimeStamperCertificate) { throw "$f isn't validly signed and timestamped" }
+          }
 
       # Signs "this file came from this workflow at this commit" through
       # Sigstore; anyone can check it with `gh attestation verify`.
