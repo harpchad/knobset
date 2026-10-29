@@ -43,13 +43,15 @@ In scope:
 - Anything that exposes a pager's access password. The pager sends it in
   plain text during the handshake; Knobset keeps only whether one is set.
 - A write that changes a pager in a way the read-back check doesn't catch.
-- Tampered release downloads. The Mac DMG is signed and notarized. The
-  Windows and Linux installers aren't signed yet, so download them only
-  from this repo's Releases page and check them against the release's
-  `SHA256SUMS.txt`. In releases after 0.6.1, `gh attestation verify`
+- Tampered release downloads. The Mac DMG is signed and notarized. From
+  0.7 the Windows installers are Authenticode-signed by Chad Harp
+  (through Azure Artifact Signing); a Windows installer from 0.7 on that
+  isn't signed by that publisher didn't come from this repo. The Linux
+  packages aren't signed, so download them only from this repo's
+  Releases page and check them against the release's `SHA256SUMS.txt`. In releases after 0.6.1, `gh attestation verify`
   also confirms that this repo's CI built them (see the README).
 
-Microsoft Defender has flagged the unsigned Windows on ARM installer as
+Microsoft Defender has flagged the unsigned (0.6.x) Windows on ARM installer as
 `Trojan:Win32/Bearfoos.A!ml`. That's a known false positive from
 Defender's machine-learning model. If the file's SHA-256 matches
 `SHA256SUMS.txt` (and, for releases after 0.6.1, its attestation
