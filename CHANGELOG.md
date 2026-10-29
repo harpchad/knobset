@@ -26,7 +26,9 @@ All notable changes to Knobset are documented here. The format follows
   Unication's driver): link, template import, backup and a knob write
   all work. The notes cover Arch's `enp…u…` interface name, running the
   AppImage without FUSE 2, and the "USB Serial Device" binding Windows
-  shows before the driver is installed.
+  shows before the driver is installed. The .deb and the ARM builds ran
+  in Ubuntu VMs, and the README now says Ubuntu Server and cloud images
+  need `linux-modules-extra` for the pager's link.
 
 ### Fixed
 

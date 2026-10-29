@@ -141,7 +141,9 @@ NetworkManager gets an address from it by DHCP, so there's nothing to
 install. `ip -br addr` should show an `enx…` interface (`enp…u…` on Arch)
 on `10.10.0.x`. If `nmcli device status` lists it as unmanaged, or the
 machine runs systemd-networkd instead, see
-[`notes/desktop-platforms.md`](notes/desktop-platforms.md).
+[`notes/desktop-platforms.md`](notes/desktop-platforms.md). Ubuntu Server
+and cloud images leave `cdc_ether` out of the kernel; add it with
+`sudo apt install linux-modules-extra-$(uname -r)`.
 
 ## Installing on Windows
 

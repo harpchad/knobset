@@ -71,8 +71,12 @@ macOS 15 and later ask once whether Knobset may reach the local network.
 
 The kernel picks the ECM configuration and binds `cdc_ether` (if a kernel
 ever picks the RNDIS one, `rndis_host` covers it). Both are modules in
-every mainstream distro kernel. Nothing to install, and no udev rule is
-needed, since Knobset only uses sockets.
+every mainstream desktop distro kernel. Nothing to install, and no udev
+rule is needed, since Knobset only uses sockets. The exception is Ubuntu
+Server and cloud images, which ship only `linux-modules` and leave both
+out: `modinfo cdc_ether` fails, the pager shows in `lsusb` with no
+network interface, and `sudo apt install linux-modules-extra-$(uname -r)`
+fixes it.
 
 Check it after plugging the pager in and letting it boot:
 
@@ -345,12 +349,37 @@ AppImage on 2026-10-28:
   pager's menu, which any write from the profile resets
   ([`firmware-update.md`](firmware-update.md)).
 
+Ubuntu 24.04 x64 (server cloud image, systemd-networkd, X11 under Xvfb),
+in a KVM VM on the same laptop with pager C passed through, 2026-10-28:
+
+- the 0.6.2 `.deb` from the release, checksum checked against
+  `SHA256SUMS.txt`, installed with `apt install ./…` (it pulled in
+  WebKitGTK and 110 packages), and the UI in WebKitGTK;
+- `cdc_ether` after adding `linux-modules-extra` (above), the `enx…`
+  interface name, and the systemd-networkd recipe above, exactly as
+  written: 10.10.0.6/16, no default route taken, internet unaffected.
+
+The pager had stopped answering the handshake by then (TCP connected, no
+reply) on every OS, so no backup ran here.
+
+Ubuntu 24.04 on ARM64 (server cloud image) in a QEMU VM on Apple
+silicon, with no pager, running the `aarch64` AppImage and `arm64` .deb
+built from main on 2026-10-28:
+
+- both install and render the UI. The VM has no GPU, so WebKitGTK falls
+  back to software rendering and the first window takes about 27
+  seconds;
+- with a pager backup copied in, opening it and selecting a knob, in
+  dark mode (`GTK_THEME=Adwaita:dark`): the drop-downs show their values.
+
 Windows 11 on x64 (Enterprise evaluation, build 26300), in a KVM VM on
 the same laptop with pager C passed through over USB, running the x64
 build of 0.6.2 on 2026-10-28:
 
-- the installer, run silently (`/S`) from a local copy, so SmartScreen
-  never came up, and the app in WebView2;
+- the installer and the app in WebView2. Downloaded with a web mark and
+  run from Explorer, SmartScreen showed "Windows protected your PC";
+  More info, then Run anyway, opened the installer. Edge's own download
+  warning wasn't tried;
 - Unication's driver setup, then the pager's link;
 - template import from `PPS_Setup.msi`;
 - a backup, byte-identical to the Mac's backup of the same pager that
@@ -373,8 +402,9 @@ through over USB, running the ARM64 build of 0.6.1:
 
 Nobody has yet:
 
-- installed the .deb, or run either ARM Linux build;
-- brought the link up under systemd-networkd instead of NetworkManager;
+- run either ARM Linux build against a pager, or on a Raspberry Pi;
+- backed up a pager under systemd-networkd (the link came up; the
+  pager didn't answer that day);
 - run either Windows build outside a VM, or on Windows 10;
 - used "Show in file manager" or the folder pickers on Linux or Windows
   (only the Linux file picker has run);
