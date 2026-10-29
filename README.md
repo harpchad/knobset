@@ -151,10 +151,14 @@ Download `Knobset_<version>_x64-setup.exe` from the same release, or
 `Knobset_<version>_arm64-setup.exe` for Windows on ARM. Either installs for
 your user without admin rights and needs Windows 10 1903 or later.
 
-They aren't signed yet, so Windows warns about them:
+From 0.7, both installers, and the app inside them, are signed: Windows
+shows the publisher as Chad Harp. A signature that new has no download
+reputation yet, so Windows may still warn for a while (0.6.2 and earlier
+are unsigned, and always warn):
 
-- SmartScreen says "Windows protected your PC": choose More info, then Run
-  anyway. Edge may also call the download uncommon: choose … › Keep.
+- SmartScreen says "Windows protected your PC": choose More info, check
+  the publisher, then Run anyway. Edge may also call the download
+  uncommon: choose … › Keep.
 - Microsoft Defender has flagged the ARM installer as
   `Trojan:Win32/Bearfoos.A!ml`. That's a false positive from Defender's
   machine-learning model, and it's been reported to Microsoft. If Defender
@@ -217,7 +221,9 @@ bundle for each Linux and Windows installer, the ARM driver script and
    `gh release create v<version> --target main --title "Knobset <version>" --notes-file <notes>`.
 3. The new tag starts the Desktop workflow, which builds the Linux and
    Windows installers and attaches them, their `.sigstore.json` bundles,
-   `install-rndis.ps1` and `SHA256SUMS.txt` to the release. If the tag was pushed before the
+   `install-rndis.ps1` and `SHA256SUMS.txt` to the release. The two
+   Windows jobs sign, so they wait for an approval of the `release`
+   environment on the run's page. If the tag was pushed before the
    release existed, rerun the workflow's last job once it does.
 4. Run the Mac and iPad scripts below from a checkout of the tag.
 

@@ -21,6 +21,10 @@ All notable changes to Knobset are documented here. The format follows
 
 ### Changed
 
+- The Windows installers, and the app inside them, are signed with
+  Azure Artifact Signing: Windows shows the publisher as Chad Harp. Builds
+  sign in CI with GitHub OIDC and no stored secret, and fail if anything
+  comes out unsigned.
 - The x64 Linux AppImage and the x64 Windows installer have now run
   against a pager (0.6.2 on Arch with Wayland, and on Windows 11 with
   Unication's driver): link, template import, backup and a knob write
