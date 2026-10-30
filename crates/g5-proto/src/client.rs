@@ -191,10 +191,13 @@ impl<T: Transport> Client<T> {
                 return Err(Error::Cancelled);
             }
             if p.opcode == op::SET_DATE_TIME && opcode != op::SET_DATE_TIME {
-                // set_date_time stops waiting after 2 s, so its reply can land here.
-                // ACK it so the pager doesn't resend, and keep waiting for ours.
+                // set_date_time stops waiting after 2 s, so its packets can land here.
+                // ACK a late reply so the pager doesn't resend (never an ACK or NAK),
+                // and keep waiting for ours.
                 debug!("late {:?} for {} during {}, skipping", p.ptype, hex(&p.opcode), hex(&opcode));
-                self.ack(p.opcode, p.seq)?;
+                if !matches!(p.ptype, PacketType::Ack | PacketType::Nak) {
+                    self.ack(p.opcode, p.seq)?;
+                }
                 continue;
             }
             match p.ptype {
@@ -590,6 +593,19 @@ mod tests {
         Mock { rx: packets.iter().flat_map(|p| p.encode()).collect(), tx: Vec::new() }
     }
 
+    /// Decode everything the client sent.
+    fn sent(tx: &[u8]) -> Vec<Packet> {
+        let mut out = Vec::new();
+        let mut i = 0;
+        while i < tx.len() {
+            let h = Header::decode(tx[i..i + HEADER_LEN].try_into().unwrap()).unwrap();
+            let end = i + HEADER_LEN + if h.content_len == 0 { 0 } else { h.content_len + 2 };
+            out.push(h.into_packet(&tx[i + HEADER_LEN..end]).unwrap());
+            i = end;
+        }
+        out
+    }
+
     fn with_session(s: u16, body: &[u8]) -> Vec<u8> {
         let mut v = s.to_be_bytes().to_vec();
         v.extend_from_slice(body);
@@ -678,16 +694,7 @@ mod tests {
         let mut c = Client::new(mock);
         c.program_files(&[("/defpara/Applications/PPS/u3db.db", &data)], None).unwrap();
 
-        // Decode everything the client sent.
-        let tx = c.into_inner().tx;
-        let mut sent = Vec::new();
-        let mut i = 0;
-        while i < tx.len() {
-            let h = Header::decode(tx[i..i + HEADER_LEN].try_into().unwrap()).unwrap();
-            let end = i + HEADER_LEN + if h.content_len == 0 { 0 } else { h.content_len + 2 };
-            sent.push(h.into_packet(&tx[i + HEADER_LEN..end]).unwrap());
-            i = end;
-        }
+        let sent = sent(&c.into_inner().tx);
         let kinds: Vec<(Opcode, PacketType)> = sent.iter().map(|p| (p.opcode, p.ptype)).collect();
         assert_eq!(kinds, vec![
             (op::START_WRITE, PacketType::Request),
@@ -713,13 +720,22 @@ mod tests {
 
     #[test]
     fn late_reply_to_another_request_is_skipped() {
-        // The clock reply missed set_date_time's 2 s wait and arrives during the commit.
+        // The clock's ACK and reply missed set_date_time's 2 s wait and arrive during the commit.
         let mock = pager(&[
+            Packet::new(op::SET_DATE_TIME, 0, 711, PacketType::Ack, vec![]),
             Packet::new(op::SET_DATE_TIME, 9, 0, PacketType::Response, with_session(711, &[0])),
             Packet::new(op::END_BUSINESS, 10, 1, PacketType::Response, with_session(1, &[0])),
         ]);
         let mut c = Client::new(mock);
         assert_eq!(c.command(op::END_BUSINESS, &[0x00]).unwrap(), 0);
+
+        // Only the late reply is ACKed, not the late ACK.
+        let acks: Vec<(Opcode, u16)> = sent(&c.into_inner().tx)
+            .iter()
+            .filter(|p| p.ptype == PacketType::Ack)
+            .map(|p| (p.opcode, p.ack_seq))
+            .collect();
+        assert_eq!(acks, vec![(op::SET_DATE_TIME, 9), (op::END_BUSINESS, 10)]);
     }
 
     #[test]
