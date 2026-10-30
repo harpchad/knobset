@@ -40,6 +40,11 @@ All notable changes to Knobset are documented here. The format follows
   so the selected system or mode looked blank. The page now tells the
   web view it's dark, so WebKitGTK (and WebView2 on Windows) draws its
   native controls dark too.
+- A write could end with "session ID mismatch" even though it worked. The
+  pager's reply to the clock update can arrive after Knobset stops waiting
+  for it, and the commit then read that late reply as its own. The pager
+  still applied the profile. Late replies to another request are now
+  acknowledged and skipped.
 
 ## [0.6.2] - 2026-10-27
 

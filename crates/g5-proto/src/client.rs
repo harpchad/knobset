@@ -190,6 +190,13 @@ impl<T: Transport> Client<T> {
             if p.opcode == op::CANCEL {
                 return Err(Error::Cancelled);
             }
+            if p.opcode == op::SET_DATE_TIME && opcode != op::SET_DATE_TIME {
+                // set_date_time stops waiting after 2 s, so its reply can land here.
+                // ACK it so the pager doesn't resend, and keep waiting for ours.
+                debug!("late {:?} for {} during {}, skipping", p.ptype, hex(&p.opcode), hex(&opcode));
+                self.ack(p.opcode, p.seq)?;
+                continue;
+            }
             match p.ptype {
                 PacketType::Ack => continue,
                 PacketType::Nak => return Err(Error::Nak(p.state)),
@@ -702,6 +709,17 @@ mod tests {
         assert_eq!(sent[6].body(true), &[0x00]);
         assert_eq!(sent[4].session(), Some(s2));
         assert_eq!(sent[7].body(true), &[0x00], "commit code");
+    }
+
+    #[test]
+    fn late_reply_to_another_request_is_skipped() {
+        // The clock reply missed set_date_time's 2 s wait and arrives during the commit.
+        let mock = pager(&[
+            Packet::new(op::SET_DATE_TIME, 9, 0, PacketType::Response, with_session(711, &[0])),
+            Packet::new(op::END_BUSINESS, 10, 1, PacketType::Response, with_session(1, &[0])),
+        ]);
+        let mut c = Client::new(mock);
+        assert_eq!(c.command(op::END_BUSINESS, &[0x00]).unwrap(), 0);
     }
 
     #[test]
