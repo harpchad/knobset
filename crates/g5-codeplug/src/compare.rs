@@ -5,7 +5,6 @@
 
 use sqlite2::Connection;
 
-use crate::row::load_table;
 use crate::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,7 +34,7 @@ pub fn compare(left: &Connection, right: &Connection) -> Result<Vec<TableDiff>, 
     for t in names {
         let (in_l, in_r) = (lt.contains(&t), rt.contains(&t));
         if !in_l || !in_r {
-            let n = if in_l { rows_of(left, &t).len() } else { rows_of(right, &t).len() };
+            let n = if in_l { rows_of(left, &t)?.len() } else { rows_of(right, &t)?.len() };
             out.push(TableDiff {
                 table: t,
                 left_rows: if in_l { n } else { 0 },
@@ -48,7 +47,7 @@ pub fn compare(left: &Connection, right: &Connection) -> Result<Vec<TableDiff>, 
             out.push(TableDiff { table: t, left_rows: 0, right_rows: 0, status: TableStatus::ColumnsDiffer });
             continue;
         }
-        let (a, b) = (rows_of(left, &t), rows_of(right, &t));
+        let (a, b) = (rows_of(left, &t)?, rows_of(right, &t)?);
         out.push(TableDiff { table: t, left_rows: a.len(), right_rows: b.len(), status: row_status(&a, &b) });
     }
     // Listed only when it differs, so identical databases report just their tables.
@@ -78,9 +77,9 @@ fn schema_of(db: &Connection) -> Result<Vec<Values>, Error> {
     Ok(db.query("SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name", &[])?.rows)
 }
 
-fn rows_of(db: &Connection, t: &str) -> Vec<Values> {
-    let cols = db.table_columns(t).unwrap_or_default();
-    load_table(db, t).iter().map(|r| cols.iter().map(|c| r.get(c).map(str::to_string)).collect()).collect()
+/// A table's rows in rowid order. Errors propagate: two failed reads must not compare equal.
+fn rows_of(db: &Connection, t: &str) -> Result<Vec<Values>, Error> {
+    Ok(db.query(&format!("SELECT * FROM '{}' ORDER BY rowid", t.replace('\'', "''")), &[])?.rows)
 }
 
 #[cfg(test)]
@@ -105,6 +104,14 @@ mod tests {
         let c = db(&dir, "c.db", "CREATE TABLE t(a); INSERT INTO t VALUES('');");
         assert_eq!(differing(&a, &b), ["t"]);
         assert_eq!(differing(&a, &c), ["t"]);
+    }
+
+    #[test]
+    fn table_names_with_quotes_are_read() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = db(&dir, "a.db", "CREATE TABLE 'o''brien'(a); INSERT INTO 'o''brien' VALUES('1');");
+        let b = db(&dir, "b.db", "CREATE TABLE 'o''brien'(a); INSERT INTO 'o''brien' VALUES('2');");
+        assert_eq!(differing(&a, &b), ["o'brien"]);
     }
 
     #[test]
