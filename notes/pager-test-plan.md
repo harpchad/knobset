@@ -86,8 +86,10 @@ with the 0.6 features. Pager C moved to firmware V2.05 (DBV1.41e) on
 2026-10-25 ([`firmware-update.md`](firmware-update.md)); B stays on V2.02. Same rules as above: one kind of write per step,
 lowest risk first, a fresh backup before starting, and after every write
 check the knob names, the step's behavior, and two or three trunked knobs.
-Steps 12 to 34 are new kinds of pager write; none has been on a pager yet.
-Step 11 (DMR audio on the local ham repeater) is still open from the 0.5 run.
+Steps 12 to 34 are new kinds of pager write; 12 to 14 and 32 to 34 have
+run so far (see Results). Step 11 (DMR audio) moves to 0.8: no DMR
+repeater near the tester has traffic. DMR knobs stay in 0.7, marked
+experimental, for anyone who can test them.
 
 | # | Feature (PR) | What to do | Expect | Notes |
 |---|---|---|---|---|
@@ -117,16 +119,25 @@ Step 11 (DMR audio on the local ham repeater) is still open from the 0.5 run.
 | 35 | Linux | Install the .deb or AppImage from a release; plug in a pager | `ip -br addr` shows an `enx...` interface (`enp...u...` on Arch) on 10.10.0.x; back up, then rename one knob and write | Needs a Linux machine |
 | 36 | Windows | Run the installer (SmartScreen: More info, Run anyway); plug in a pager | If it shows as USB Serial Device (COM3) or under Other devices, install Unication's RNDIS driver (x64) or run `install-rndis.ps1` (ARM); `ipconfig` shows 10.10.0.x; back up, rename, write | Needs a Windows machine |
 
-## Results (0.6, 2026-10-20 to 2026-10-28)
+## Results (0.6, 2026-10-20 to 2026-10-30)
 
 | # | Result | Notes |
 |---|---|---|
 | 12 | Pass | Pager B |
 | 13 | Pass | Pager B |
 | 14 | Pass | Pager B, covered before the step was run on purpose |
-| 15 to 34 | Not run | Steps 30 to 34 needed 1.41e support once pager C was updated |
+| 15 to 31 | Not run | |
+| 32 | Pass | 2026-10-29, B's newest backup (1.41c) onto C's (1.41e): C keeps its radio number, alias, unit IDs and passwords; 4 zones, 27 knobs and 8 systems replace C's 3, 20 and 7; the radio DB is regenerated for 1.41e. B and C already shared radio number User-001, alias and P25 unit ID, so keeping C's own values can't be told apart from copying B's |
+| 33 | Pass | 2026-10-29 from the CLI over the Linux laptop. C's profile DB matches B's in all 163 tables; its live and staged radio DBs match B's profile converted for 1.41e in all 194. C shows the Test zone, knobs receive, and the handshake still reports User-001. The first attempt was refused: the target guard compared bytes, and C's radio DB had been rewritten with the same tables by step 36's rename-back (fixed after: the guard now compares tables) |
+| 34 | Pass, with a bug | 2026-10-30, Linux app 0.6.2: knob rename on Metro knob 8 applied (backup shows only that change), but the dialog said "session ID mismatch (got 711, want 25)". The clock reply arrived after `set_date_time` stopped waiting and the commit read it as its own; fixed after 0.6.2. Renamed back from the CLI; C matches its post-clone backup table for table |
 | 35 | Pass | 2026-10-28, x64 Arch laptop (Wayland), 0.6.2 AppImage, pager A: link up with no setup, template import, backup, knob rename written and renamed back; the profile matches the first backup table for table. The write reset the backlight setting changed on the pager's menu, as PPS's writes do. Later the same day: the 0.6.2 .deb on an Ubuntu 24.04 x64 VM (link up under systemd-networkd), and the ARM builds on an Ubuntu ARM VM with no pager; see `desktop-platforms.md`. |
 | 36 | Pass | x64: 2026-10-28, Windows 11 x64 in a KVM VM on the Arch laptop, 0.6.2 x64 build (SmartScreen checked separately on a downloaded copy: More info, Run anyway), pager C: Unication's driver setup turned the COM3 binding into a working RNDIS link with no re-plug, then template import, a backup byte-identical to the Mac's, and a knob rename confirmed on the display and renamed back (last backup matches the first table for table). ARM: Windows 11 on ARM (UTM VM on the Studio, pager C passed through over USB), ARM64 build of 0.6.1: installer, `install-rndis.ps1` bringing up the link, template import from Unication's installer, a backup identical to the Mac's, and a knob rename (Metro knob 5) written and verified after the reboot. Renamed back through the VM on 2026-10-28; a Mac backup afterwards matches the pre-test one table for table. |
+
+Also on 2026-10-30: the first P25 conventional knob on a pager (step 10
+of the 0.5 plan). Pager C, Test knob 4, Monitor on a local ham repeater
+(VHF) that carries FM and P25, NAC F7E (any), all-call talkgroup. The
+pager kept every row: its live radio DB matches the one written, 194/194.
+Audio not heard yet; the repeater is quiet between nets.
 
 Also on 2026-10-25:
 

@@ -42,6 +42,10 @@ need no driver; RNDIS on Windows), serves DHCP on `10.10.0.0/16`, and
 speaks a framed request/ACK protocol over TCP at `10.10.0.12:32769`.
 Programming is file transfer of SQLite 2 databases. See [`notes/protocol.md`](notes/protocol.md).
 
+The pager serves one connection at a time. The app checks it every five
+seconds, and a check can drop any other connection, so quit the app
+before using the `g5` command-line tool on the same pager.
+
 ## Layout
 
 | Path | What |
@@ -144,6 +148,10 @@ machine runs systemd-networkd instead, see
 [`notes/desktop-platforms.md`](notes/desktop-platforms.md). Ubuntu Server
 and cloud images leave `cdc_ether` out of the kernel; add it with
 `sudo apt install linux-modules-extra-$(uname -r)`.
+
+On Hyprland (Omarchy, for one), clicks can land beside the button you
+aimed at while Knobset's window is tiled. Float the window (Super+T on
+Omarchy) and they line up again.
 
 ## Installing on Windows
 
