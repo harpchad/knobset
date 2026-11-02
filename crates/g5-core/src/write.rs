@@ -182,14 +182,24 @@ pub struct WriteResult {
     pub new_backup: Option<BackupInfo>,
 }
 
-/// Whether two backups hold the same profile (all five profile files equal).
-/// A safety backup of a write that never programmed matches the backup it
-/// was taken from, so editing can continue from either.
+/// Whether two backups hold the same profile (see `files_match`). A safety
+/// backup of a write that never programmed matches the backup it was taken
+/// from, so editing can continue from either.
 pub fn same_profile(a: &Path, b: &Path) -> bool {
     match (load_backup_files(a), load_backup_files(b)) {
-        (Ok(x), Ok(y)) => x == y,
+        (Ok(x), Ok(y)) => files_match(a, &x, b, &y),
         _ => false,
     }
+}
+
+/// The profile files are equal, or differ only in the radio DB's bytes (and
+/// its sidecar) with every table the same. A write that changes nothing, such
+/// as renaming a knob and back, can leave the radio DB rewritten that way.
+fn files_match(a: &Path, x: &[(&str, Vec<u8>)], b: &Path, y: &[(&str, Vec<u8>)]) -> bool {
+    let radio = |p: &str| p == RADIO_DB || p.strip_suffix(".md5") == Some(RADIO_DB);
+    x == y
+        || (x.iter().zip(y).all(|(f, g)| radio(f.0) || f.1 == g.1)
+            && table_diffs(&a.join(rel(RADIO_DB)), &b.join(rel(RADIO_DB))).is_ok_and(|d| d.is_empty()))
 }
 
 fn rel(p: &str) -> &str {
@@ -716,7 +726,7 @@ pub(crate) fn program_on(
     if set.require_unchanged_pager {
         let source = load_backup_files(src)?;
         let current = load_backup_files(&safety.path)?;
-        if source.iter().zip(&current).any(|(a, b)| a.1 != b.1) {
+        if !files_match(src, &source, &safety.path, &current) {
             bail!("the pager's profile changed since this backup was taken; open the newest backup ({}) and edit that instead", safety.id);
         }
     }
@@ -817,6 +827,44 @@ mod tests {
         let files = load_backup_files(dir.path()).unwrap();
         let sidecar = &files.iter().find(|(p, _)| p.ends_with("u3db.db.md5")).unwrap().1;
         assert_eq!(String::from_utf8_lossy(sidecar), radio_md5());
+    }
+
+    /// A backup folder's radio DB: table `t` with `rows`. `churn` creates and
+    /// drops a table first, which changes the file's bytes but not its tables.
+    fn radio_db(dir: &Path, rows: &[&str], churn: bool) -> Vec<u8> {
+        let path = dir.join(rel(RADIO_DB));
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let c = sqlite2::Connection::open(&path).unwrap();
+        let mut sql = String::from("CREATE TABLE t(a);");
+        if churn {
+            sql.push_str("CREATE TABLE u(b); DROP TABLE u;");
+        }
+        for r in rows {
+            sql.push_str(&format!("INSERT INTO t VALUES('{r}');"));
+        }
+        c.execute_batch(&sql).unwrap();
+        drop(c);
+        fs::read(path).unwrap()
+    }
+
+    fn profile_files(pc: &[u8], radio: Vec<u8>) -> Vec<(&'static str, Vec<u8>)> {
+        let sidecar = hex_upper(&Md5::digest(&radio)).into_bytes();
+        vec![(PC_DB, pc.to_vec()), (RADIO_DB, radio), ("/defpara/Applications/PPS/u3db.db.md5", sidecar), (PC_ZIP, b"zip".to_vec()), ("/defpara/Applications/PPS/u3db_PC.zip.md5", b"Z".to_vec())]
+    }
+
+    #[test]
+    fn radio_db_rewritten_with_the_same_tables_still_matches() {
+        let (a, b, c) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let x = profile_files(b"pc", radio_db(a.path(), &["1"], false));
+        let y = profile_files(b"pc", radio_db(b.path(), &["1"], true));
+        assert_ne!(x[1].1, y[1].1, "the churn should change the radio DB's bytes");
+        assert!(files_match(a.path(), &x, b.path(), &y));
+
+        // A different profile DB, or a real change in the radio DB, still counts.
+        let y_pc = profile_files(b"pc2", y[1].1.clone());
+        assert!(!files_match(a.path(), &x, b.path(), &y_pc));
+        let z = profile_files(b"pc", radio_db(c.path(), &["1", "2"], false));
+        assert!(!files_match(a.path(), &x, c.path(), &z));
     }
 
     #[test]
