@@ -7,8 +7,17 @@ October 2027. Priorities can shift with what testers report; the
 ## Next (0.7)
 
 - Finish the on-pager test plan (`notes/pager-test-plan.md`, steps 15 to
-  34): talkgroup settings, pager settings, cloning, knob copy and move.
-- Verify P25 conventional on a pager, and DMR audio on a local repeater.
+  31): talkgroup settings, pager settings, knob copy and move.
+- Hear audio on the P25 conventional knob already written to a pager.
+
+## After that (0.8)
+
+- Hear audio on a DMR knob. DMR knobs ship in 0.7, marked experimental,
+  so anyone near an active DMR repeater can try them and report back.
+- A demo mode with built-in sample data, so the iPad app can be used
+  (and reviewed by Apple) without a pager.
+- A Mac App Store build: sandboxed, with access to the backups folder
+  kept through a security-scoped bookmark. The notarized DMG stays.
 
 ## Later in the year
 

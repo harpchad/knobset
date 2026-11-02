@@ -33,6 +33,14 @@ All notable changes to Knobset are documented here. The format follows
   shows before the driver is installed. The .deb and the ARM builds ran
   in Ubuntu VMs, and the README now says Ubuntu Server and cloud images
   need `linux-modules-extra` for the pager's link.
+- Cloning has now run on real pagers: a 1.41c pager's profile written to a
+  1.41e pager matches table for table. The first P25 conventional knob is
+  on a pager too, and the pager kept it; nobody has heard audio on one
+  yet. DMR knobs stay experimental: DMR audio testing moves to 0.8.
+- The README says to quit the app before using `g5` on the same pager
+  (the app's connection check can drop the tool's connection), and to
+  float the window on Hyprland if clicks land beside buttons while it's
+  tiled.
 
 ### Fixed
 
@@ -45,6 +53,11 @@ All notable changes to Knobset are documented here. The format follows
   for it, and the commit then read that late reply as its own. The pager
   still applied the profile. Late replies to another request are now
   acknowledged and skipped.
+- A write or clone could be refused with "the pager's profile changed
+  since this backup was taken" when nothing had changed: a write that
+  ends where it started (renaming a knob and back) can leave the radio DB
+  with different bytes but the same tables. The check now compares the
+  radio DB table by table.
 
 ## [0.6.2] - 2026-10-27
 
