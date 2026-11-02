@@ -4,14 +4,11 @@ What Knobset intends to do, and not do, from November 2026 through
 October 2027. Priorities can shift with what testers report; the
 [CHANGELOG](CHANGELOG.md) records what actually shipped.
 
-## Next (0.7)
+## Next (0.8)
 
 - Finish the on-pager test plan (`notes/pager-test-plan.md`, steps 15 to
   31): talkgroup settings, pager settings, knob copy and move.
 - Hear audio on the P25 conventional knob already written to a pager.
-
-## After that (0.8)
-
 - Hear audio on a DMR knob. DMR knobs ship in 0.7, marked experimental,
   so anyone near an active DMR repeater can try them and report back.
 - A demo mode with built-in sample data, so the iPad app can be used

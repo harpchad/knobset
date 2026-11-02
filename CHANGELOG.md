@@ -6,6 +6,14 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-02
+
+Signed Windows installers, Linux on 64-bit ARM, and two write-path fixes
+found on real pagers. Cloning and a P25 conventional knob have now been
+written to real pagers. The 0.6 talkgroup settings, pager settings and
+knob copy and move (test plan steps 15 to 31) still haven't been tried
+on a pager.
+
 ### Added
 
 - Linux builds for 64-bit ARM: an `aarch64` AppImage and an `arm64` .deb,
@@ -57,7 +65,9 @@ All notable changes to Knobset are documented here. The format follows
   since this backup was taken" when nothing had changed: a write that
   ends where it started (renaming a knob and back) can leave the radio DB
   with different bytes but the same tables. The check now compares the
-  radio DB table by table.
+  radio DB table by table. That comparison (also `g5 compare`) now
+  includes indexes, triggers and views, tells NULL apart from text, and
+  reports a table it can't read instead of treating it as empty.
 
 ## [0.6.2] - 2026-10-27
 
