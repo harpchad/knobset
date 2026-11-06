@@ -27,7 +27,16 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Only cancel an in-progress run when new commits make it stale (a
+  # `synchronize`). Dependabot applies its labels (e.g. `dependencies`,
+  # `rust`) immediately after opening a PR, which fires `opened` followed
+  # within the same second by one `pull_request` event per label. With
+  # cancel-in-progress scoped to all pull_request actions, each of those
+  # near-simultaneous `labeled` runs cancelled the real `opened` run before
+  # "Test and clippy" could finish, and the `labeled` runs' own `check` job
+  # always no-ops (its `if` only cares about the `build-installers` label),
+  # so the required check never produced a result on a Dependabot PR.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' }}
 
 permissions:
   contents: read
