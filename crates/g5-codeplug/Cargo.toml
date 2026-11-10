@@ -15,5 +15,5 @@ tempfile = "3"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 # Template import from the PPS installer (Inno Setup exe -> MSI -> CAB).
 innospect = "0.2"
-msi = "0.10"
+msi = "0.11"
 cab = "0.6"
