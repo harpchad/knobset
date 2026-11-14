@@ -41,6 +41,9 @@ and Muse Wonder Full):
 - An ACK for an earlier chunk counted as delivery of the current one.
 - A pager could ask for a 4 GB read or a wait of years; reads over
   64 MiB and waits over 2 minutes are refused.
+- A crafted profile zip or PPS installer could fill the disk or memory.
+  Profile zips are limited to 4096 entries and 256 MiB expanded, and
+  installers to four nested layers of 1 GiB.
 - The check after a write now refuses a different pager plugged in
   during the reboot, and errors name the safety backup.
 - A SQLite read that failed partway could pass as a shorter result.

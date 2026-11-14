@@ -23,6 +23,10 @@ October 2027. Priorities can shift with what testers report; the
 - Alert tones (M5), once a non-GPL G.729A encoder is settled.
 - Fuzzing the vendored SQLite 2 reader with AddressSanitizer, and adopting
   rustfmt with a config that matches the code's style.
+- Binding every value in the radio-DB converter. It builds some SQL as
+  text from profile values today (free text is quoted, and the write guard
+  checks its output table by table); this waits for hardware runs to
+  confirm the regenerated databases stay identical.
 
 ## Not planned
 

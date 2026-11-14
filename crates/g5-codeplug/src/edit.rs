@@ -70,7 +70,7 @@ pub fn repack_zip(original: &Path, p: &Profile, now: &str) -> Result<Vec<u8>, Er
         let action = match local {
             Some(path) if entry.is_file() && path.is_file() => {
                 let bytes = std::fs::read(&path)?;
-                let mut old = Vec::with_capacity(entry.size() as usize);
+                let mut old = Vec::with_capacity((entry.size() as usize).min(bytes.len()));
                 std::io::Read::read_to_end(&mut entry, &mut old)?;
                 if old != bytes { Action::Replace(bytes) } else { Action::Copy }
             }

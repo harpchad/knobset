@@ -51,6 +51,18 @@ pub fn import_installer(src: &Path, dest: &Path) -> Result<Imported, Error> {
 
 /// Peel the zip and Inno layers until the MSI is reached.
 fn find_msi(bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
+    find_msi_in(bytes, 0)
+}
+
+/// Unication ships at most a zip around an Inno setup around the MSI.
+const MAX_LAYERS: usize = 4;
+/// The 0.4 installer is about 53 MB; anything far bigger isn't one.
+const MAX_LAYER_BYTES: u64 = 1024 * 1024 * 1024;
+
+fn find_msi_in(bytes: Vec<u8>, depth: usize) -> Result<Vec<u8>, Error> {
+    if depth >= MAX_LAYERS {
+        return Err(Error::Installer("too many nested archives for a PPS installer".into()));
+    }
     match bytes.get(..4) {
         Some([0xD0, 0xCF, 0x11, 0xE0]) => Ok(bytes),
         Some([b'P', b'K', 3, 4]) => {
@@ -59,8 +71,11 @@ fn find_msi(bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
                 .find(|&i| zip.by_index(i).is_ok_and(|e| e.name().is_ok_and(|n| is_installer_name(&n))))
                 .ok_or_else(|| Error::Installer("the zip has no PPS installer in it".into()))?;
             let mut inner = Vec::new();
-            zip.by_index(idx)?.read_to_end(&mut inner)?;
-            find_msi(inner)
+            zip.by_index(idx)?.take(MAX_LAYER_BYTES + 1).read_to_end(&mut inner)?;
+            if inner.len() as u64 > MAX_LAYER_BYTES {
+                return Err(Error::Installer("the installer in the zip is far bigger than PPS's".into()));
+            }
+            find_msi_in(inner, depth + 1)
         }
         Some([b'M', b'Z', ..]) => {
             let inst = innospect::InnoInstaller::from_bytes(&bytes).map_err(|e| Error::Installer(e.to_string()))?;

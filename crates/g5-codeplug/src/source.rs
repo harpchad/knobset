@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use sqlite2::Connection;
@@ -13,6 +13,11 @@ use crate::Error;
 pub const BACKUP_PROFILE_ZIP: &str = "defpara/Applications/PPS/u3db_PC.zip";
 /// Path of the radio DB PPS uploaded, inside a `g5 backup` folder.
 pub const BACKUP_RADIO_DB: &str = "defpara/Applications/PPS/u3db.db";
+
+/// Limits for a profile zip, which may be a backup someone shared. Real
+/// ones expand to under 2 MB in a few dozen entries.
+const MAX_ZIP_ENTRIES: usize = 4096;
+const MAX_ZIP_BYTES: u64 = 256 * 1024 * 1024;
 
 /// A PPS profile: `<GUID>.db` plus its `<GUID>/` resource folder (one DB per
 /// P25 system, tone/prompt catalogs, custom wavs).
@@ -36,6 +41,10 @@ impl Profile {
         let tmp = tempfile::tempdir()?;
         let file = fs::File::open(zip_path)?;
         let mut zip = zip::ZipArchive::new(file)?;
+        if zip.len() > MAX_ZIP_ENTRIES {
+            return Err(Error::Invalid(format!("the profile zip has {} entries; a profile has a few dozen", zip.len())));
+        }
+        let mut budget = MAX_ZIP_BYTES;
         for i in 0..zip.len() {
             let mut entry = zip.by_index(i)?;
             let name = entry.name().map(|n| n.into_owned()).unwrap_or_default();
@@ -52,7 +61,12 @@ impl Profile {
                 if let Some(p) = dest.parent() {
                     fs::create_dir_all(p)?;
                 }
-                io::copy(&mut entry, &mut fs::File::create(&dest)?)?;
+                // Counted as it's written, not from the header, which could lie.
+                let n = io::copy(&mut (&mut entry).take(budget + 1), &mut fs::File::create(&dest)?)?;
+                if n > budget {
+                    return Err(Error::Invalid(format!("the profile zip expands to more than {} MiB", MAX_ZIP_BYTES >> 20)));
+                }
+                budget -= n;
             }
         }
         let root_db = fs::read_dir(tmp.path())?
@@ -179,6 +193,22 @@ mod tests {
             assert!(p.system_db_path(bad).is_err(), "{bad:?}");
             assert!(p.system_db(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn zip_bombs_are_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("u3db_PC.zip");
+        let mut w = zip::ZipWriter::new(fs::File::create(&path).unwrap());
+        let o = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated).large_file(true);
+        w.start_file("big.db", o).unwrap();
+        let chunk = vec![0u8; 1 << 20];
+        for _ in 0..=(MAX_ZIP_BYTES >> 20) {
+            w.write_all(&chunk).unwrap();
+        }
+        w.finish().unwrap();
+        let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
+        assert!(err.contains("expands to more than"), "{err}");
     }
 
     #[test]
