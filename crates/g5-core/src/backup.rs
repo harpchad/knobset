@@ -23,10 +23,19 @@ const NOT_BACKED_UP: &[&str] = &["keytab", "SuperPassword.conf"];
 
 /// A listing name the backup can store: one plain file name. The pager is
 /// on the far side of a network link, so a name like `../x` is refused
-/// rather than joined onto the backup folder.
+/// rather than joined onto the backup folder. Backups move between
+/// systems, so Windows' rules apply everywhere: no `:*?"<>|`, no trailing
+/// dot or space, and no device names like `CON` or `COM1`.
 fn safe_name(name: &str) -> bool {
     let mut c = Path::new(name).components();
-    matches!((c.next(), c.next()), (Some(std::path::Component::Normal(_)), None)) && !name.contains(['\\', '\0'])
+    let stem = name.split('.').next().unwrap_or("").to_ascii_uppercase();
+    let device = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || (stem.len() == 4 && (stem.starts_with("COM") || stem.starts_with("LPT")) && stem.as_bytes()[3].is_ascii_digit());
+    matches!((c.next(), c.next()), (Some(std::path::Component::Normal(_)), None))
+        && !name.contains(['\\', '\0', ':', '*', '?', '"', '<', '>', '|'])
+        && !name.chars().any(char::is_control)
+        && !name.ends_with(['.', ' '])
+        && !device
 }
 
 /// A backup folder on disk, described by its MANIFEST.txt.
@@ -113,13 +122,19 @@ pub fn backup(client: &mut Pager, info: &DeviceInfo, root: &Path, progress: &mut
     // Folder names have one-second resolution. A second backup in the same
     // second (a safety backup right after "Back up now") waits for the next
     // one instead of writing into the first backup's folder.
+    let mut tries = 0;
     let dir = loop {
         // UTC, marked with a Z: iPadOS apps can't read the system time zone, so local time isn't reliable.
         let stamp = jiff::Timestamp::now().strftime("%Y%m%d-%H%M%SZ");
         let dir = root.join(format!("{}-{}-{stamp}", sanitize(model), sanitize(&info.serial_number)));
         match fs::create_dir(&dir) {
             Ok(()) => break dir,
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => std::thread::sleep(std::time::Duration::from_millis(100)),
+            // A few seconds at most: a clock set back onto an old backup's
+            // stamp must not hang the pager session.
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && tries < 30 => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
             Err(e) => return Err(e).with_context(|| format!("creating {}", dir.display())),
         }
     };
@@ -193,10 +208,10 @@ mod tests {
 
     #[test]
     fn listing_names_must_be_plain_file_names() {
-        for ok in ["u3db.db", "u3db_PC.zip.md5", "a b.dat"] {
+        for ok in ["u3db.db", "u3db_PC.zip.md5", "a b.dat", "CONFIG.txt", "COMPANY.db"] {
             assert!(safe_name(ok), "{ok}");
         }
-        for bad in ["", ".", "..", "../x", "a/b", "/etc/passwd", "a\\b", "..\\x", "a\0b"] {
+        for bad in ["", ".", "..", "../x", "a/b", "/etc/passwd", "a\\b", "..\\x", "a\0b", "u3db.db.", "u3db.db ", "a:b", "x?.db", "CON", "nul.db", "COM1.txt", "lpt9"] {
             assert!(!safe_name(bad), "{bad:?}");
         }
     }

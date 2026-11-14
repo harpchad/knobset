@@ -10,7 +10,7 @@ use md5::{Digest, Md5};
 use crate::backup::{BackupInfo, backup};
 use crate::device::{authorize_read, connect, hex_upper};
 use crate::fake_pager::FakePager;
-use crate::write::{PC_DB, PC_ZIP, RADIO_DB, WriteSet, program, restore_set};
+use crate::write::{PC_DB, PC_ZIP, RADIO_DB, WriteSet, files_set, program, restore_set};
 
 const GUID: &str = "0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e10";
 
@@ -67,9 +67,8 @@ fn take_backup(fake: &FakePager, root: &Path) -> anyhow::Result<BackupInfo> {
 }
 
 /// The source backup's profile replaced by `tag`'s, as an edit would.
-fn edit(src: &Path, tag: &str) -> WriteSet {
-    let mut set = restore_set(src).unwrap();
-    set.files = profile(tag);
+fn edit(_src: &Path, tag: &str) -> WriteSet {
+    let mut set = files_set(profile(tag));
     set.require_unchanged_pager = true;
     set
 }
@@ -208,4 +207,36 @@ fn restore_checks_the_backup_first() {
     // A database cut off after its header doesn't open.
     fs::write(&pc, &good[..sqlite2::FILE_HEADER.len()]).unwrap();
     assert!(restore_set(&src.path).is_err());
+}
+
+#[test]
+fn restore_replaces_a_damaged_profile() {
+    // A pager whose zip no longer matches its sidecar: an edit refuses it,
+    // but a restore is how it gets fixed.
+    let root = tempfile::tempdir().unwrap();
+    let fake = FakePager::start(pager_files("a"));
+    let src = take_backup(&fake, root.path()).unwrap();
+    fake.with(|s| s.files.insert("/defpara/Applications/PPS/u3db_PC.zip.md5".into(), b"00000000000000000000000000000000".to_vec()));
+
+    let err = format!("{:#}", run(&fake, &src.path, &edit(&src.path, "b"), root.path()).unwrap_err());
+    assert!(err.contains("doesn't hold the whole profile"), "{err}");
+    assert_eq!(fake.with(|s| s.write_businesses), 0);
+
+    run(&fake, &src.path, &restore_set(&src.path).unwrap(), root.path()).unwrap();
+    assert_eq!(fake.with(|s| s.commits), 1);
+    assert_eq!(pps_file(&fake, "/defpara/Applications/PPS/u3db_PC.zip.md5"), fs::read(src.path.join("defpara/Applications/PPS/u3db_PC.zip.md5")).unwrap());
+}
+
+#[test]
+fn edit_refuses_when_its_safety_backup_wouldnt_restore() {
+    let root = tempfile::tempdir().unwrap();
+    let fake = FakePager::start(pager_files("a"));
+    let src = take_backup(&fake, root.path()).unwrap();
+    // u3db_PC.db no longer matches the zip's copy, on the pager and in the source backup alike.
+    let other = db("other");
+    fake.with(|s| s.files.insert(PC_DB.into(), other.clone()));
+    fs::write(src.path.join(PC_DB.trim_start_matches('/')), &other).unwrap();
+    let err = format!("{:#}", run(&fake, &src.path, &edit(&src.path, "b"), root.path()).unwrap_err());
+    assert!(err.contains("couldn't be restored from its safety backup"), "{err}");
+    assert_eq!(fake.with(|s| s.write_businesses), 0);
 }

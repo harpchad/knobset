@@ -273,7 +273,12 @@ fn md5_read_from_pager(src: &Path, path: &str) -> Option<String> {
 pub fn restore_set(src: &Path) -> Result<WriteSet> {
     let files = load_backup_files(src)?;
     check_restorable(src).with_context(|| format!("{} can't be restored", src.display()))?;
-    Ok(WriteSet { files, renames: Vec::new(), talkgroups: Vec::new(), systems: Vec::new(), knob_systems: Vec::new(), conv_knobs: Vec::new(), zones: Vec::new(), scan_knobs: Vec::new(), removed_knobs: Vec::new(), conv_updates: Vec::new(), digital_knobs: Vec::new(), knob_copies: Vec::new(), knob_moves: Vec::new(), settings: Vec::new(), experimental: Vec::new(), changed_tables: Vec::new(), require_unchanged_pager: false })
+    Ok(files_set(files))
+}
+
+/// A set that writes `files` and describes no edits.
+pub(crate) fn files_set(files: Vec<(&'static str, Vec<u8>)>) -> WriteSet {
+    WriteSet { files, renames: Vec::new(), talkgroups: Vec::new(), systems: Vec::new(), knob_systems: Vec::new(), conv_knobs: Vec::new(), zones: Vec::new(), scan_knobs: Vec::new(), removed_knobs: Vec::new(), conv_updates: Vec::new(), digital_knobs: Vec::new(), knob_copies: Vec::new(), knob_moves: Vec::new(), settings: Vec::new(), experimental: Vec::new(), changed_tables: Vec::new(), require_unchanged_pager: false }
 }
 
 /// The backup's profile with `edits` applied, regenerated for the pager.
@@ -734,12 +739,22 @@ pub(crate) fn program_on(
     authorize_read(client, password)?;
     progress(Progress::step("Safety backup"));
     let safety = backup(client, info, backups_root, progress)?;
-    // Without the whole profile in the safety backup there is no way back.
-    let current = load_backup_files(&safety.path).with_context(|| format!("the safety backup {} doesn't hold the whole profile, so nothing was written", safety.id))?;
+    // The safety backup is the way back, so it must hold the whole profile.
+    let incomplete = || format!("the safety backup {} doesn't hold the whole profile, so nothing was written", safety.id);
     if set.require_unchanged_pager {
+        // An edit or clone promises that its safety backup restores, so it
+        // must pass the same checks a restore does.
+        let current = load_backup_files(&safety.path).with_context(incomplete)?;
+        check_restorable(&safety.path).with_context(|| format!("the pager's current profile couldn't be restored from its safety backup {}, so nothing was written", safety.id))?;
         let source = load_backup_files(src)?;
         if !files_match(src, &source, &safety.path, &current) {
             bail!("the pager's profile changed since this backup was taken; open the newest backup ({}) and edit that instead", safety.id);
+        }
+    } else {
+        // A restore is how a damaged profile gets replaced, so it only needs
+        // the files to be there; their contents may be what's broken.
+        for p in PROFILE_FILES {
+            fs::metadata(safety.path.join(rel(p))).with_context(incomplete)?;
         }
     }
 
@@ -799,10 +814,11 @@ fn read_back_after_commit(addr: SocketAddr, password: Option<&str>, pager: &Page
     for attempt in 1..=12 {
         let result = (|| -> Result<Vec<Vec<u8>>> {
             let (mut c, info) = connect(addr)?;
-            // A swapped pager won't come back as the right one; stop retrying.
+            // Retried like any other failure: a pager mid-restart might
+            // answer with part of its identity. Only a persistent mismatch is reported.
             if let Err(e) = same_pager(pager, &info) {
                 c.bye();
-                return Err(e.context(SwappedPager));
+                return Err(e);
             }
             authorize_read(&mut c, password)?;
             let files = c.read_files(PROFILE_FILES)?;
@@ -811,7 +827,6 @@ fn read_back_after_commit(addr: SocketAddr, password: Option<&str>, pager: &Page
         })();
         match result {
             Ok(f) => return Ok(f),
-            Err(e) if e.downcast_ref::<SwappedPager>().is_some() => return Err(e),
             Err(e) => {
                 tracing::debug!("read-back attempt {attempt} failed: {e:#}");
                 last = Some(e);
@@ -820,16 +835,6 @@ fn read_back_after_commit(addr: SocketAddr, password: Option<&str>, pager: &Page
         }
     }
     Err(last.unwrap()).context("could not read the profile back after programming")
-}
-
-/// Marks a read-back that reached a different pager.
-#[derive(Debug)]
-struct SwappedPager;
-
-impl std::fmt::Display for SwappedPager {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("read-back reached a different pager")
-    }
 }
 
 #[cfg(test)]

@@ -33,10 +33,16 @@ export default function RestoreDialog({ backup, open, onOpenChange }: { backup: 
     if (!open || !backup) return;
     setConfirmed(false);
     setPhase({ kind: "checking" });
+    // A check for a backup this dialog no longer shows must not change its phase,
+    // or a late answer could unlock the dialog mid-restore.
+    let current = true;
     api
       .planRestore(backup.id)
-      .then(() => setPhase({ kind: "ready" }))
-      .catch((e) => setPhase({ kind: "error", message: String(e), checked: false }));
+      .then(() => current && setPhase({ kind: "ready" }))
+      .catch((e) => current && setPhase({ kind: "error", message: String(e), checked: false }));
+    return () => {
+      current = false;
+    };
   }, [open, backup]);
 
   if (!backup) return null;

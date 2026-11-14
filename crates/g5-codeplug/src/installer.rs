@@ -84,7 +84,13 @@ fn find_msi_in(bytes: Vec<u8>, depth: usize) -> Result<Vec<u8>, Error> {
                 .iter()
                 .find(|f| f.destination.to_lowercase().ends_with(INNER_MSI))
                 .ok_or_else(|| Error::Installer("this installer doesn't contain PPS_Setup.msi".into()))?;
-            inst.extract_to_vec(file).map_err(|e| Error::Installer(e.to_string()))
+            let mut reader = inst.extract(file).map_err(|e| Error::Installer(e.to_string()))?;
+            if reader.len() as u64 > MAX_LAYER_BYTES {
+                return Err(Error::Installer("the MSI in the installer is far bigger than PPS's".into()));
+            }
+            let mut msi = Vec::with_capacity(reader.len());
+            reader.read_to_end(&mut msi).map_err(|e| Error::Installer(e.to_string()))?;
+            Ok(msi)
         }
         _ => Err(Error::Installer("not a PPS installer (expected the .zip, .exe, or .msi from Unication)".into())),
     }
@@ -158,7 +164,10 @@ fn extract_database(msi_bytes: Vec<u8>, out: &Path) -> Result<(usize, u64), Erro
     let (mut files, mut bytes) = (0, 0);
     for name in cabs {
         let mut buf = Vec::new();
-        pkg.read_stream(&name)?.read_to_end(&mut buf)?;
+        pkg.read_stream(&name)?.take(MAX_LAYER_BYTES + 1).read_to_end(&mut buf)?;
+        if buf.len() as u64 > MAX_LAYER_BYTES {
+            return Err(Error::Installer(format!("cabinet {name} is far bigger than PPS's")));
+        }
         let mut cab = cab::Cabinet::new(Cursor::new(buf))?;
         let keys: Vec<String> = cab.folder_entries().flat_map(|f| f.file_entries().map(|e| e.name().to_string())).collect();
         for key in keys {
@@ -167,7 +176,13 @@ fn extract_database(msi_bytes: Vec<u8>, out: &Path) -> Result<(usize, u64), Erro
             if let Some(p) = dest.parent() {
                 fs::create_dir_all(p)?;
             }
-            bytes += std::io::copy(&mut cab.read_file(&key)?, &mut fs::File::create(&dest)?)?;
+            // Counted as it's written: the database folder is about 50 MB.
+            let left = MAX_LAYER_BYTES.saturating_sub(bytes);
+            let n = std::io::copy(&mut cab.read_file(&key)?.take(left + 1), &mut fs::File::create(&dest)?)?;
+            if n > left {
+                return Err(Error::Installer("the installer's database folder is far bigger than PPS's".into()));
+            }
+            bytes += n;
             files += 1;
         }
     }

@@ -69,10 +69,13 @@ impl Profile {
                 budget -= n;
             }
         }
-        let root_db = fs::read_dir(tmp.path())?
-            .filter_map(|e| e.ok().map(|e| e.path()))
-            .find(|p| p.is_file() && p.extension().is_some_and(|x| x == "db"))
-            .ok_or_else(|| Error::Invalid("no <GUID>.db at the root of the profile zip".into()))?;
+        let roots: Vec<PathBuf> =
+            fs::read_dir(tmp.path())?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.is_file() && p.extension().is_some_and(|x| x == "db")).collect();
+        // Exactly one, or which profile loads would depend on directory order.
+        let [root_db] = roots.as_slice() else {
+            return Err(Error::Invalid(format!("the profile zip should have one <GUID>.db at its root, not {}", roots.len())));
+        };
+        let root_db = root_db.clone();
         let folder = root_db.with_extension("");
         let mut p = Self::from_parts(&root_db, &folder)?;
         p._tmp = Some(tmp);
@@ -209,6 +212,19 @@ mod tests {
         w.finish().unwrap();
         let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
         assert!(err.contains("expands to more than"), "{err}");
+    }
+
+    #[test]
+    fn zip_needs_exactly_one_root_db() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = zip_at(dir.path(), |w, o| {
+            for n in ["a.db", "b.db"] {
+                w.start_file(n, o).unwrap();
+                w.write_all(b"x").unwrap();
+            }
+        });
+        let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
+        assert!(err.contains("not 2"), "{err}");
     }
 
     #[test]

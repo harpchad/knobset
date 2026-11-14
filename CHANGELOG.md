@@ -28,24 +28,31 @@ and Muse Wonder Full):
 
 - A pager, or a device posing as one, could make a backup write files
   outside the backup folder with names like `../x` in its file listing.
-  Listing names must now be plain file names.
+  Listing names must now be plain file names that are also valid on
+  Windows.
 - System IDs from a shared backup became file paths unchecked, so
   deleting a crafted system could delete a file elsewhere. They must now
   be GUIDs.
 - A restore went ahead when the safety backup was incomplete, for
   example when the pager failed to list its profile folder. Every write
-  now needs a safety backup that holds the whole profile.
+  now needs a safety backup with all five profile files. An edit or a
+  clone also needs it to pass the checks a restore makes, so the backup
+  it promises as the way back really restores. A restore doesn't: it's
+  how a damaged profile gets replaced.
 - A restore wrote a backup's files after checking only their first bytes
   and MD5s. It now checks that both databases open and that
-  `u3db_PC.db` matches the copy inside `u3db_PC.zip`.
+  `u3db_PC.db` matches the copy inside `u3db_PC.zip`, the only database
+  at the zip's root.
 - An ACK for an earlier chunk counted as delivery of the current one.
 - A pager could ask for a 4 GB read or a wait of years; reads over
   64 MiB and waits over 2 minutes are refused.
 - A crafted profile zip or PPS installer could fill the disk or memory.
   Profile zips are limited to 4096 entries and 256 MiB expanded, and
-  installers to four nested layers of 1 GiB.
+  installers to four nested layers, each layer and the extracted
+  database folder to 1 GiB.
 - The check after a write now refuses a different pager plugged in
-  during the reboot, and errors name the safety backup.
+  during the reboot (after the usual retries), and errors name the
+  safety backup.
 - A SQLite read that failed partway could pass as a shorter result.
 - Two backups taken in the same second wrote into one folder.
 - Temporary radio databases are now in a private temporary folder.
