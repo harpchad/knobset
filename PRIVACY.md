@@ -8,7 +8,11 @@ ads or telemetry, and it never connects to the internet.
 - **Backups** of your pager's profile, including its serial number,
   zones, knobs and talkgroups. On a Mac, Linux or Windows they're in the
   app's data folder or the folder you pick in Settings; on an iPad they're
-  in Knobset's folder in the Files app.
+  in Knobset's folder in the Files app. The profile databases hold MD5s
+  of the pager's access password and lock PIN, if it has them, so treat a
+  backup like those when you share it. Backups leave out the pager's key
+  material (`keytab`) and its super password file (`SuperPassword.conf`);
+  backups taken with Knobset 0.7 or earlier include them.
 - **Unication's templates**, imported from your own copy of their PPS
   installer.
 - **Settings**: those folders and the pager's address.

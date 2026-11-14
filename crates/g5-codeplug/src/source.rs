@@ -25,6 +25,11 @@ pub struct Profile {
     _tmp: Option<tempfile::TempDir>,
 }
 
+/// A GUID in either case, the only shape PPS gives system IDs.
+pub(crate) fn is_system_id(id: &str) -> bool {
+    id.len() == 36 && id.char_indices().all(|(i, c)| if [8, 13, 18, 23].contains(&i) { c == '-' } else { c.is_ascii_hexdigit() })
+}
+
 impl Profile {
     /// Load from a `u3db_PC.zip` (what PPS stores on the pager).
     pub fn from_zip(zip_path: &Path) -> Result<Self, Error> {
@@ -81,9 +86,19 @@ impl Profile {
         self._tmp.is_some()
     }
 
+    /// Path of the per-system DB `<folder>/<id>.db`. System IDs come from the
+    /// profile, which may be a backup someone shared, so anything but a GUID
+    /// is refused before it reaches the filesystem.
+    pub fn system_db_path(&self, id: &str) -> Result<PathBuf, Error> {
+        if !is_system_id(id) {
+            return Err(Error::Invalid(format!("profile has a system ID that is not a GUID: {id:?}")));
+        }
+        Ok(self.folder.join(format!("{id}.db")))
+    }
+
     /// Open the per-system DB `<folder>/<id>.db`.
     pub fn system_db(&self, id: &str) -> Result<Connection, Error> {
-        let p = self.folder.join(format!("{id}.db"));
+        let p = self.system_db_path(id)?;
         if !p.is_file() {
             return Err(Error::Invalid(format!("profile references missing system DB {id}.db")));
         }
@@ -148,6 +163,21 @@ mod tests {
             });
             let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
             assert!(err.contains("unsafe path"), "{name}: {err}");
+        }
+    }
+
+    #[test]
+    fn system_ids_must_be_guids() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("p.db");
+        Connection::open(&db).unwrap().execute_batch("CREATE TABLE t(a);").unwrap();
+        let p = Profile::from_parts(&db, &dir.path().join("p")).unwrap();
+        for ok in ["0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e10", "0E8C1A52-6F1B-4D1E-9A43-5B7F2C8D9E10"] {
+            assert_eq!(p.system_db_path(ok).unwrap(), dir.path().join("p").join(format!("{ok}.db")));
+        }
+        for bad in ["", "../0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e1", "/etc/passwd", "AlertToneTotal", "0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e1g", "\\\\host\\share\\x"] {
+            assert!(p.system_db_path(bad).is_err(), "{bad:?}");
+            assert!(p.system_db(bad).is_err(), "{bad:?}");
         }
     }
 

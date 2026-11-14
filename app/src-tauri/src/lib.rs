@@ -5,7 +5,7 @@
 use std::fs;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError, TryLockError};
 
 use anyhow::{Context, anyhow};
 use g5_codeplug::summary::Summary;
@@ -53,7 +53,7 @@ struct AppState {
 
 impl AppState {
     fn snapshot(&self) -> Settings {
-        self.settings.lock().unwrap().clone()
+        self.settings.lock().unwrap_or_else(PoisonError::into_inner).clone()
     }
 
     fn backups_dir(&self) -> PathBuf {
@@ -69,7 +69,7 @@ impl AppState {
             fs::create_dir_all(dir)?;
         }
         fs::write(&self.settings_path, serde_json::to_vec_pretty(&s)?)?;
-        *self.settings.lock().unwrap() = s;
+        *self.settings.lock().unwrap_or_else(PoisonError::into_inner) = s;
         Ok(())
     }
 
@@ -173,7 +173,13 @@ async fn device_status(state: State<'_, AppState>) -> CmdResult<DeviceStatus> {
     let addr = state.addr().map_err(err)?;
     let lock = state.device.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let Ok(mut cached) = lock.try_lock() else { return DeviceStatus::Busy };
+        // A panic in an earlier operation poisons the lock; the cache is still
+        // usable, so don't report Busy for the rest of the session.
+        let mut cached = match lock.try_lock() {
+            Ok(g) => g,
+            Err(TryLockError::Poisoned(p)) => p.into_inner(),
+            Err(TryLockError::WouldBlock) => return DeviceStatus::Busy,
+        };
         if let Some(device) = cached.clone() {
             if reachable(addr) {
                 return DeviceStatus::Connected { device };
@@ -207,7 +213,7 @@ async fn backup_now(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Bac
     let mut progress = emitter(&app);
     let _awake = keep_alive::hold(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        let mut cached = lock.lock().unwrap();
+        let mut cached = lock.lock().unwrap_or_else(PoisonError::into_inner);
         let (mut client, info) = connect(addr)?;
         *cached = Some(DeviceSummary::from(&info));
         let r = authorize_read(&mut client, None).and_then(|()| backup(&mut client, &info, &root, &mut progress));
@@ -399,7 +405,7 @@ async fn write_to_pager(app: AppHandle, state: State<'_, AppState>, backup_id: S
     let mut progress = emitter(&app);
     let _awake = keep_alive::hold(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        let mut cached = lock.lock().unwrap();
+        let mut cached = lock.lock().unwrap_or_else(PoisonError::into_inner);
         *cached = None; // the pager reboots; the next poll reads it again
         progress(Progress::step("Preparing files"));
         let set = build_set(&path, &templates, &edits)?;
@@ -483,7 +489,7 @@ async fn clone_to_pager(app: AppHandle, state: State<'_, AppState>, source_id: S
     let mut progress = emitter(&app);
     let _awake = keep_alive::hold(&app);
     tauri::async_runtime::spawn_blocking(move || {
-        let mut cached = lock.lock().unwrap();
+        let mut cached = lock.lock().unwrap_or_else(PoisonError::into_inner);
         *cached = None; // the pager reboots; the next poll reads it again
         progress(Progress::step("Preparing files"));
         let (set, summary) = g5_core::clone::clone_set(&src, &tgt, &templates)?;

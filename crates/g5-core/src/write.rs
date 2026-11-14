@@ -3,10 +3,11 @@
 //! Every write goes through `program`, which:
 //! 1. requires the backup to come from this exact pager (model, serial, radio DB version),
 //! 2. verifies the backup's own MD5 sidecars and file formats,
-//! 3. takes a fresh safety backup,
+//! 3. takes a fresh safety backup and refuses unless it holds the whole profile,
 //! 4. for edits, refuses if the pager changed since the source backup,
 //! 5. programs the files in PPS order inside one write business,
-//! 6. reconnects after the pager's reboot and verifies every file byte for byte.
+//! 6. reconnects after the pager's reboot, checks it is the same pager, and
+//!    verifies every file byte for byte.
 
 use std::fs;
 use std::net::SocketAddr;
@@ -215,6 +216,10 @@ pub(crate) fn load_backup_files(src: &Path) -> Result<Vec<(&'static str, Vec<u8>
     let mut files = Vec::new();
     for p in PROFILE_FILES {
         let local = src.join(rel(p));
+        let len = fs::metadata(&local).with_context(|| format!("reading {}", local.display()))?.len();
+        if len > g5_proto::client::MAX_READ as u64 {
+            bail!("{} is {len} bytes, more than any profile file", local.display());
+        }
         files.push((*p, fs::read(&local).with_context(|| format!("reading {}", local.display()))?));
     }
     for i in 0..files.len() {
@@ -234,6 +239,21 @@ pub(crate) fn load_backup_files(src: &Path) -> Result<Vec<(&'static str, Vec<u8>
     Ok(files)
 }
 
+fn check_restorable(src: &Path) -> Result<()> {
+    for p in [PC_DB, RADIO_DB] {
+        let c = sqlite2::Connection::open(&src.join(rel(p)))?;
+        let tables = c.query("SELECT name FROM sqlite_master WHERE type = 'table'", &[]).with_context(|| format!("{p} is not a readable database"))?;
+        if tables.rows.is_empty() {
+            bail!("{p} has no tables");
+        }
+    }
+    let profile = Profile::from_backup(src).context("the profile zip")?;
+    if fs::read(&profile.db_path)? != fs::read(src.join(rel(PC_DB)))? {
+        bail!("u3db_PC.db is not the profile DB inside u3db_PC.zip");
+    }
+    Ok(())
+}
+
 /// The MD5 the backup's manifest recorded for `path` as read off the pager.
 fn md5_read_from_pager(src: &Path, path: &str) -> Option<String> {
     let manifest = fs::read_to_string(src.join("MANIFEST.txt")).ok()?;
@@ -245,8 +265,15 @@ fn md5_read_from_pager(src: &Path, path: &str) -> Option<String> {
 }
 
 /// The backup's files as they are (a restore), apart from a corrected stale radio DB sidecar.
+///
+/// A restore writes the files verbatim, so they are checked first: both
+/// databases must open and list their tables, the zip must hold a profile,
+/// and the standalone profile DB must be the zip's own copy, as it is in
+/// every backup taken off a pager.
 pub fn restore_set(src: &Path) -> Result<WriteSet> {
-    Ok(WriteSet { files: load_backup_files(src)?, renames: Vec::new(), talkgroups: Vec::new(), systems: Vec::new(), knob_systems: Vec::new(), conv_knobs: Vec::new(), zones: Vec::new(), scan_knobs: Vec::new(), removed_knobs: Vec::new(), conv_updates: Vec::new(), digital_knobs: Vec::new(), knob_copies: Vec::new(), knob_moves: Vec::new(), settings: Vec::new(), experimental: Vec::new(), changed_tables: Vec::new(), require_unchanged_pager: false })
+    let files = load_backup_files(src)?;
+    check_restorable(src).with_context(|| format!("{} can't be restored", src.display()))?;
+    Ok(WriteSet { files, renames: Vec::new(), talkgroups: Vec::new(), systems: Vec::new(), knob_systems: Vec::new(), conv_knobs: Vec::new(), zones: Vec::new(), scan_knobs: Vec::new(), removed_knobs: Vec::new(), conv_updates: Vec::new(), digital_knobs: Vec::new(), knob_copies: Vec::new(), knob_moves: Vec::new(), settings: Vec::new(), experimental: Vec::new(), changed_tables: Vec::new(), require_unchanged_pager: false })
 }
 
 /// The backup's profile with `edits` applied, regenerated for the pager.
@@ -435,9 +462,9 @@ pub fn edit_set(src: &Path, templates: &Path, edits: &Edits) -> Result<WriteSet>
 
     // Moves go last and are converted on their own: what they change on top of
     // the other edits must be a pure renumbering.
-    let mut temps = TempFiles(Vec::new());
+    let temps = tempfile::tempdir()?;
     let backup_radio = src.join(BACKUP_RADIO_DB);
-    let (mid, mut experimental) = convert_temp(&profile, &templates, variant, "g5-edit", &mut temps)?;
+    let (mid, mut experimental) = convert_temp(&profile, &templates, variant, &temps.path().join("edit.db"))?;
     let diffs = table_diffs(&mid, &backup_radio)?;
     let mut knob_moves = Vec::new();
     for m in &edits.knob_moves {
@@ -446,7 +473,7 @@ pub fn edit_set(src: &Path, templates: &Path, edits: &Edits) -> Result<WriteSet>
     let (out, move_diffs, all) = if knob_moves.is_empty() {
         (mid, Vec::new(), diffs.clone())
     } else {
-        let (out, exp) = convert_temp(&profile, &templates, variant, "g5-move", &mut temps)?;
+        let (out, exp) = convert_temp(&profile, &templates, variant, &temps.path().join("move.db"))?;
         experimental = exp;
         let (m, a) = (table_diffs(&out, &mid)?, table_diffs(&out, &backup_radio)?);
         (out, m, a)
@@ -612,22 +639,11 @@ fn describe_talkgroup_change(before: &Summary, renames: &[g5_codeplug::zone_edit
     }
 }
 
-/// Temporary radio DBs, removed when dropped.
-struct TempFiles(Vec<std::path::PathBuf>);
-
-impl Drop for TempFiles {
-    fn drop(&mut self) {
-        for f in &self.0 {
-            let _ = fs::remove_file(f);
-        }
-    }
-}
-
-/// Convert the working copy to a temporary radio DB, refusing unverified
-/// features. Returns its path and the experimental features it uses.
-fn convert_temp(profile: &Profile, templates: &Templates, variant: Variant, prefix: &str, temps: &mut TempFiles) -> Result<(std::path::PathBuf, Vec<String>)> {
-    let out = tempfile_path(prefix);
-    temps.0.push(out.clone());
+/// Convert the working copy to the radio DB `out` (in a private temp
+/// folder), refusing unverified features. Returns `out` and the
+/// experimental features it uses.
+fn convert_temp(profile: &Profile, templates: &Templates, variant: Variant, out: &Path) -> Result<(std::path::PathBuf, Vec<String>)> {
+    let out = out.to_path_buf();
     let report = g5_codeplug::convert141::convert(profile, templates, variant, &out)?;
     if !report.unverified.is_empty() {
         bail!("profile uses features not yet verified for writing: {}", report.unverified.join(", "));
@@ -640,11 +656,6 @@ fn table_diffs(ours: &Path, theirs: &Path) -> Result<Vec<g5_codeplug::compare::T
     let a = sqlite2::Connection::open(ours)?;
     let b = sqlite2::Connection::open(theirs)?;
     Ok(compare(&a, &b)?.into_iter().filter(|d| d.status != TableStatus::Same).collect())
-}
-
-pub(crate) fn tempfile_path(prefix: &str) -> std::path::PathBuf {
-    let n = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
-    std::env::temp_dir().join(format!("{prefix}-{}-{n}.db", std::process::id()))
 }
 
 /// PPS's time zone string: POSIX sign convention (UTC-5 is `GMT+05:00:00`).
@@ -723,9 +734,10 @@ pub(crate) fn program_on(
     authorize_read(client, password)?;
     progress(Progress::step("Safety backup"));
     let safety = backup(client, info, backups_root, progress)?;
+    // Without the whole profile in the safety backup there is no way back.
+    let current = load_backup_files(&safety.path).with_context(|| format!("the safety backup {} doesn't hold the whole profile, so nothing was written", safety.id))?;
     if set.require_unchanged_pager {
         let source = load_backup_files(src)?;
-        let current = load_backup_files(&safety.path)?;
         if !files_match(src, &source, &safety.path, &current) {
             bail!("the pager's profile changed since this backup was taken; open the newest backup ({}) and edit that instead", safety.id);
         }
@@ -740,10 +752,11 @@ pub(crate) fn program_on(
         .program_files_with_progress(&refs, Some((&zone, &now)), &mut |i, sent, _| {
             progress(Progress::of(format!("Writing {}", refs[i].0), offsets[i] + sent, total));
         })
-        .context("programming")?;
+        .with_context(|| format!("programming failed; if the pager misbehaves, restore the safety backup {}", safety.id))?;
 
     progress(Progress::step("Pager is rebooting to apply the profile"));
-    let back = read_back_after_commit(addr, password)?;
+    let pager = PagerId::of(info);
+    let back = read_back_after_commit(addr, password, &pager).with_context(|| format!("the safety backup {} has the previous files", safety.id))?;
     let mut verified = Vec::new();
     for ((path, data), got) in set.files.iter().zip(&back) {
         if data != got {
@@ -756,7 +769,7 @@ pub(crate) fn program_on(
     progress(Progress::step("Backing up the new profile"));
     let new_backup = (|| -> Result<BackupInfo> {
         let (mut c, info) = connect(addr)?;
-        let r = authorize_read(&mut c, password).and_then(|()| backup(&mut c, &info, backups_root, progress));
+        let r = same_pager(&pager, &info).and_then(|()| authorize_read(&mut c, password)).and_then(|()| backup(&mut c, &info, backups_root, progress));
         c.bye();
         r
     })()
@@ -765,13 +778,32 @@ pub(crate) fn program_on(
     Ok(WriteResult { safety_backup: safety, verified, new_backup })
 }
 
+/// How long the pager takes to reboot after a commit, and the wait between
+/// reconnect attempts. Tests talk to a fake pager that doesn't reboot.
+const REBOOT_WAIT: Duration = Duration::from_secs(if cfg!(test) { 0 } else { 10 });
+const RECONNECT_WAIT: Duration = if cfg!(test) { Duration::from_millis(50) } else { Duration::from_secs(5) };
+
+/// The pager that answered after the reboot must be the one just written.
+fn same_pager(want: &PagerId, info: &DeviceInfo) -> Result<()> {
+    let got = PagerId::of(info);
+    if got != *want {
+        bail!("a different pager answered after the write (serial {}, expected {})", got.serial, want.serial);
+    }
+    Ok(())
+}
+
 /// The pager reboots a few seconds after a commit; reconnect and read the profile files.
-fn read_back_after_commit(addr: SocketAddr, password: Option<&str>) -> Result<Vec<Vec<u8>>> {
-    std::thread::sleep(Duration::from_secs(10));
+fn read_back_after_commit(addr: SocketAddr, password: Option<&str>, pager: &PagerId) -> Result<Vec<Vec<u8>>> {
+    std::thread::sleep(REBOOT_WAIT);
     let mut last = None;
     for attempt in 1..=12 {
         let result = (|| -> Result<Vec<Vec<u8>>> {
-            let (mut c, _) = connect(addr)?;
+            let (mut c, info) = connect(addr)?;
+            // A swapped pager won't come back as the right one; stop retrying.
+            if let Err(e) = same_pager(pager, &info) {
+                c.bye();
+                return Err(e.context(SwappedPager));
+            }
             authorize_read(&mut c, password)?;
             let files = c.read_files(PROFILE_FILES)?;
             c.bye();
@@ -779,14 +811,25 @@ fn read_back_after_commit(addr: SocketAddr, password: Option<&str>) -> Result<Ve
         })();
         match result {
             Ok(f) => return Ok(f),
+            Err(e) if e.downcast_ref::<SwappedPager>().is_some() => return Err(e),
             Err(e) => {
                 tracing::debug!("read-back attempt {attempt} failed: {e:#}");
                 last = Some(e);
-                std::thread::sleep(Duration::from_secs(5));
+                std::thread::sleep(RECONNECT_WAIT);
             }
         }
     }
     Err(last.unwrap()).context("could not read the profile back after programming")
+}
+
+/// Marks a read-back that reached a different pager.
+#[derive(Debug)]
+struct SwappedPager;
+
+impl std::fmt::Display for SwappedPager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("read-back reached a different pager")
+    }
 }
 
 #[cfg(test)]

@@ -162,6 +162,9 @@ interface State {
   setBusy: (b: string | null) => void;
 }
 
+/** Counts openBackup calls, so only the latest one applies its result. */
+let openToken = 0;
+
 export const useStore = create<State>((set, get) => ({
   page: "pager",
   device: null,
@@ -212,14 +215,18 @@ export const useStore = create<State>((set, get) => ({
   setSettings: (settings) => set({ settings }),
 
   openBackup: async (id) => {
+    const token = ++openToken;
     set({ loadingProfile: true });
     try {
       const profile = await api.loadProfile(id);
+      // A later open wins; a slower earlier one must not replace it.
+      if (token !== openToken) return;
       set({ profile, renames: {}, talkgroups: {}, knobSystems: {}, convKnobs: {}, scanKnobs: {}, removedKnobs: {}, convUpdates: {}, newZones: [], zoneRenames: {}, deletedZones: [], zoneOrder: null, knobCopies: {}, knobMoves: {}, pagerSettings: {}, systems: {}, deletedSystems: [], bands: {}, profileBands: [], page: "zones" });
-      api.systemBands(id).then((bands) => set({ bands: { ...bands, ...get().bands } })).catch(() => {});
-      api.profileBands(id).then((profileBands) => set({ profileBands })).catch(() => {});
+      const current = () => get().profile === profile;
+      api.systemBands(id).then((bands) => current() && set({ bands: { ...bands, ...get().bands } })).catch(() => {});
+      api.profileBands(id).then((profileBands) => current() && set({ profileBands })).catch(() => {});
     } finally {
-      set({ loadingProfile: false });
+      if (token === openToken) set({ loadingProfile: false });
     }
   },
 
@@ -263,6 +270,8 @@ export const useStore = create<State>((set, get) => ({
     const profile = get().profile;
     if (!profile || get().systems[systemId]) return;
     const original = await api.loadSystem(profile.backup.id, systemId);
+    // Another backup opened meanwhile: this system belongs to the old one.
+    if (get().profile !== profile) return;
     if (!get().systems[systemId]) set({ systems: { ...get().systems, [systemId]: { original, draft: structuredClone(original) } } });
   },
 
@@ -321,7 +330,9 @@ export const useStore = create<State>((set, get) => ({
   },
 
   copySystem: async (backupId, system) => {
+    const profile = get().profile;
     const state = await api.loadSystem(backupId, system.id);
+    if (get().profile !== profile) throw new Error("A different backup was opened while copying; copy the system again.");
     const id = crypto.randomUUID().toLowerCase();
     const taken = new Set([...(get().profile?.summary.systems ?? []).map((s) => s.name.trim()), ...Object.values(get().systems).map((s) => s.draft.name.trim())]);
     let name = state.name.trim();

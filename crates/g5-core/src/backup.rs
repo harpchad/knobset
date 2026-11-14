@@ -16,6 +16,18 @@ use crate::device::{Pager, describe, hex_upper};
 pub const PROFILE_DIRS: &[&str] = &["/defpara/Applications/PPS/", "/root/Applications/u3db/"];
 /// Skip anything bigger than this (profiles are a few MB at most).
 const MAX_BACKUP_FILE: u32 = 64 * 1024 * 1024;
+/// Files in the profile directories that hold credentials (the pager's key
+/// material and its super password's MD5). Nothing reads them back and
+/// nothing writes them, so backups leave them out.
+const NOT_BACKED_UP: &[&str] = &["keytab", "SuperPassword.conf"];
+
+/// A listing name the backup can store: one plain file name. The pager is
+/// on the far side of a network link, so a name like `../x` is refused
+/// rather than joined onto the backup folder.
+fn safe_name(name: &str) -> bool {
+    let mut c = Path::new(name).components();
+    matches!((c.next(), c.next()), (Some(std::path::Component::Normal(_)), None)) && !name.contains(['\\', '\0'])
+}
 
 /// A backup folder on disk, described by its MANIFEST.txt.
 #[derive(Debug, Clone, Serialize)]
@@ -97,10 +109,20 @@ fn sanitize(s: &str) -> String {
 /// The caller must already have passed the read-access check.
 pub fn backup(client: &mut Pager, info: &DeviceInfo, root: &Path, progress: &mut dyn FnMut(Progress)) -> Result<BackupInfo> {
     let model = info.model_number.as_deref().unwrap_or("unknown");
-    // UTC, marked with a Z: iPadOS apps can't read the system time zone, so local time isn't reliable.
-    let stamp = jiff::Timestamp::now().strftime("%Y%m%d-%H%M%SZ");
-    let dir = root.join(format!("{}-{}-{stamp}", sanitize(model), sanitize(&info.serial_number)));
-    fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    fs::create_dir_all(root).with_context(|| format!("creating {}", root.display()))?;
+    // Folder names have one-second resolution. A second backup in the same
+    // second (a safety backup right after "Back up now") waits for the next
+    // one instead of writing into the first backup's folder.
+    let dir = loop {
+        // UTC, marked with a Z: iPadOS apps can't read the system time zone, so local time isn't reliable.
+        let stamp = jiff::Timestamp::now().strftime("%Y%m%d-%H%M%SZ");
+        let dir = root.join(format!("{}-{}-{stamp}", sanitize(model), sanitize(&info.serial_number)));
+        match fs::create_dir(&dir) {
+            Ok(()) => break dir,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => std::thread::sleep(std::time::Duration::from_millis(100)),
+            Err(e) => return Err(e).with_context(|| format!("creating {}", dir.display())),
+        }
+    };
     let r = fill(client, info, &dir, progress);
     // A backup that stopped partway (the pager dropped off, a read failed) is no backup: drop its folder.
     if r.is_err() && !dir.join("MANIFEST.txt").exists() {
@@ -119,6 +141,13 @@ fn fill(client: &mut Pager, info: &DeviceInfo, dir: &Path, progress: &mut dyn Fn
             Ok(entries) => {
                 let _ = writeln!(manifest, "{d}");
                 for e in entries {
+                    if !safe_name(&e.name) {
+                        bail!("the pager listed an unsafe file name in {d}: {:?}", e.name);
+                    }
+                    if NOT_BACKED_UP.contains(&e.name.as_str()) {
+                        let _ = writeln!(manifest, "  {:>10}  {}  (holds credentials, not backed up)", e.size, e.name);
+                        continue;
+                    }
                     let _ = writeln!(manifest, "  {:>10}  {}", e.size, e.name);
                     if e.size <= MAX_BACKUP_FILE {
                         wanted.push(format!("{d}{}", e.name));
@@ -161,6 +190,16 @@ fn fill(client: &mut Pager, info: &DeviceInfo, dir: &Path, progress: &mut dyn Fn
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn listing_names_must_be_plain_file_names() {
+        for ok in ["u3db.db", "u3db_PC.zip.md5", "a b.dat"] {
+            assert!(safe_name(ok), "{ok}");
+        }
+        for bad in ["", ".", "..", "../x", "a/b", "/etc/passwd", "a\\b", "..\\x", "a\0b"] {
+            assert!(!safe_name(bad), "{bad:?}");
+        }
+    }
 
     #[test]
     fn reads_manifest_and_sorts_newest_first() {

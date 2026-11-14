@@ -24,7 +24,7 @@ use serde::Serialize;
 
 use crate::Progress;
 use crate::device::{connect, hex_upper};
-use crate::write::{PC_DB, PC_ZIP, PagerId, RADIO_DB, WriteResult, WriteSet, load_backup_files, program_on, restore_set, tempfile_path};
+use crate::write::{PC_DB, PC_ZIP, PagerId, RADIO_DB, WriteResult, WriteSet, load_backup_files, program_on, restore_set};
 
 /// One side of a clone, for display.
 #[derive(Debug, Clone, Serialize)]
@@ -153,7 +153,9 @@ pub fn clone_set(source: &Path, target: &Path, templates: &Path) -> Result<(Writ
     }
 
     // The source's own radio DB must regenerate exactly, or nothing below proves anything.
-    let (src_regen, out, ref_db) = (tempfile_path("g5-clone-src"), tempfile_path("g5-clone-out"), tempfile_path("g5-clone-ref"));
+    // A private folder: other local users can't plant files where these go.
+    let tmp = tempfile::tempdir()?;
+    let (src_regen, out, ref_db) = (tmp.path().join("clone-src.db"), tmp.path().join("clone-out.db"), tmp.path().join("clone-ref.db"));
     let cleanup = || {
         for f in [&src_regen, &out, &ref_db] {
             let _ = fs::remove_file(f);
