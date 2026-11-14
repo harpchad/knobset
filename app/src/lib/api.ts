@@ -50,6 +50,8 @@ export const api = {
   backupSystems: (backupId: string) => call<BackupSystem[]>("backup_systems", { backupId }),
   planClone: (sourceId: string, targetId: string) => call<ClonePlan>("plan_clone", { sourceId, targetId }),
   cloneToPager: (sourceId: string, targetId: string) => call<WriteResult>("clone_to_pager", { sourceId, targetId }),
+  planRestore: (backupId: string) => call<[string, number][]>("plan_restore", { backupId }),
+  restoreToPager: (backupId: string) => call<WriteResult>("restore_to_pager", { backupId }),
 };
 
 /** Subscribe to long-operation progress. Returns an unsubscribe function. */

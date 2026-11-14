@@ -6,6 +6,52 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Restore from the Backups page: write a backup back to the pager it came
+  from, exactly as it was taken, with the same safety backup and
+  read-back as any write. Until now only `g5 restore` could, so the
+  advice to restore a safety backup after an experimental write didn't
+  work on an iPad.
+
+### Changed
+
+- Backups leave out the pager's `keytab` and `SuperPassword.conf`. Both
+  hold credentials, and nothing reads or writes them. `PRIVACY.md` now
+  says the profile databases hold MD5s of the access password and lock
+  PIN.
+
+### Fixed
+
+From a review of 0.7.0 by three AI models (Claude Opus 5.5, GPT-6.1 Sol
+and Muse Wonder Full):
+
+- A pager, or a device posing as one, could make a backup write files
+  outside the backup folder with names like `../x` in its file listing.
+  Listing names must now be plain file names.
+- System IDs from a shared backup became file paths unchecked, so
+  deleting a crafted system could delete a file elsewhere. They must now
+  be GUIDs.
+- A restore went ahead when the safety backup was incomplete, for
+  example when the pager failed to list its profile folder. Every write
+  now needs a safety backup that holds the whole profile.
+- A restore wrote a backup's files after checking only their first bytes
+  and MD5s. It now checks that both databases open and that
+  `u3db_PC.db` matches the copy inside `u3db_PC.zip`.
+- An ACK for an earlier chunk counted as delivery of the current one.
+- A pager could ask for a 4 GB read or a wait of years; reads over
+  64 MiB and waits over 2 minutes are refused.
+- The check after a write now refuses a different pager plugged in
+  during the reboot, and errors name the safety backup.
+- A SQLite read that failed partway could pass as a shorter result.
+- Two backups taken in the same second wrote into one folder.
+- Temporary radio databases are now in a private temporary folder.
+- After an operation crashed, the app showed the pager as busy until it
+  was restarted.
+- Opening a second backup while the first was still loading could mix
+  their data.
+- CI checkouts no longer keep the GitHub token on disk.
+
 ## [0.7.0] - 2026-11-02
 
 Signed Windows installers, Linux on 64-bit ARM, and two write-path fixes

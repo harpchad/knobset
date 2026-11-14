@@ -13,7 +13,7 @@ use g5_codeplug::{Profile, Templates};
 use g5_core::Progress;
 use g5_core::backup::{BackupInfo, backup, list_backups};
 use g5_core::device::{DeviceSummary, authorize_read, connect, reachable};
-use g5_core::write::{Edits, RenameApplied, TalkgroupChange, WriteResult, edit_set, program};
+use g5_core::write::{Edits, RenameApplied, TalkgroupChange, WriteResult, edit_set, program, restore_set};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -500,6 +500,37 @@ async fn clone_to_pager(app: AppHandle, state: State<'_, AppState>, source_id: S
     .map_err(err)
 }
 
+/// Check that a backup can be restored, before asking to write it. Returns its files and sizes.
+#[tauri::command]
+async fn plan_restore(state: State<'_, AppState>, backup_id: String) -> CmdResult<Vec<(String, usize)>> {
+    let path = state.backup_path(&backup_id).map_err(err)?;
+    tauri::async_runtime::spawn_blocking(move || -> anyhow::Result<Vec<(String, usize)>> {
+        Ok(restore_set(&path)?.files.iter().map(|(p, d)| (p.to_string(), d.len())).collect())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(err)
+}
+
+/// Write a backup back to the pager it came from, exactly as it was taken.
+#[tauri::command]
+async fn restore_to_pager(app: AppHandle, state: State<'_, AppState>, backup_id: String) -> CmdResult<WriteResult> {
+    let path = state.backup_path(&backup_id).map_err(err)?;
+    let (addr, root, lock) = (state.addr().map_err(err)?, state.backups_dir(), state.device.clone());
+    let mut progress = emitter(&app);
+    let _awake = keep_alive::hold(&app);
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut cached = lock.lock().unwrap_or_else(PoisonError::into_inner);
+        *cached = None; // the pager reboots; the next poll reads it again
+        progress(Progress::step("Checking the backup"));
+        let set = restore_set(&path)?;
+        program(addr, None, &path, &set, &root, &mut progress)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(err)
+}
+
 /// On iOS, backups live in Documents/Backups, which the Files app shows as
 /// On My iPad › Knobset › Backups. Desktop keeps them in app data.
 fn default_backups(app: &tauri::App, data: &Path) -> tauri::Result<PathBuf> {
@@ -568,6 +599,8 @@ pub fn run() {
             backup_systems,
             plan_clone,
             clone_to_pager,
+            plan_restore,
+            restore_to_pager,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
