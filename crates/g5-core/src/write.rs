@@ -216,11 +216,14 @@ pub(crate) fn load_backup_files(src: &Path) -> Result<Vec<(&'static str, Vec<u8>
     let mut files = Vec::new();
     for p in PROFILE_FILES {
         let local = src.join(rel(p));
-        let len = fs::metadata(&local).with_context(|| format!("reading {}", local.display()))?.len();
-        if len > g5_proto::client::MAX_READ as u64 {
-            bail!("{} is {len} bytes, more than any profile file", local.display());
+        // Bounded while reading, so a file swapped for a bigger one can't get past the limit.
+        let max = g5_proto::client::MAX_READ as u64;
+        let mut data = Vec::new();
+        fs::File::open(&local).and_then(|f| std::io::Read::read_to_end(&mut std::io::Read::take(f, max + 1), &mut data)).with_context(|| format!("reading {}", local.display()))?;
+        if data.len() as u64 > max {
+            bail!("{} is more than {} MiB, bigger than any profile file", local.display(), max >> 20);
         }
-        files.push((*p, fs::read(&local).with_context(|| format!("reading {}", local.display()))?));
+        files.push((*p, data));
     }
     for i in 0..files.len() {
         let Some(target) = files[i].0.strip_suffix(".md5") else { continue };

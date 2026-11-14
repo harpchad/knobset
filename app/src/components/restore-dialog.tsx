@@ -61,8 +61,9 @@ export default function RestoreDialog({ backup, open, onOpenChange }: { backup: 
       const result = await api.restoreToPager(backup.id);
       setPhase({ kind: "done", result });
       toast.success(`${backup.serial} restored and verified`);
-      await refreshBackups();
       if (!result.new_backup) toast.warning("The restore worked, but backing up the pager afterwards failed. Back it up before its next change.");
+      // The restore is done; a failed list refresh mustn't turn it into an error.
+      refreshBackups().catch((e) => toast.error("Couldn't refresh the backup list", { description: String(e) }));
     } catch (e) {
       setPhase({ kind: "error", message: String(e), checked: true });
     } finally {

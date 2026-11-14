@@ -28,7 +28,12 @@ pub struct Imported {
 /// Extract the template folder from `src` (PPS zip, Inno exe, or MSI) into
 /// `dest`, replacing any previous import only once the new one is complete.
 pub fn import_installer(src: &Path, dest: &Path) -> Result<Imported, Error> {
-    let msi = find_msi(fs::read(src)?)?;
+    let mut bytes = Vec::new();
+    fs::File::open(src)?.take(MAX_LAYER_BYTES + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_LAYER_BYTES {
+        return Err(Error::Installer("this file is far bigger than PPS's installer".into()));
+    }
+    let msi = find_msi(bytes)?;
     let name = dest.file_name().ok_or_else(|| Error::Installer("destination has no folder name".into()))?;
     let staging = dest.with_file_name(format!(".{}.partial", name.to_string_lossy()));
     if staging.exists() {

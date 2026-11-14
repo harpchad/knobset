@@ -72,10 +72,11 @@ export default function BackupsPage() {
                         <FolderSearch />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon-sm" onClick={() => setRestoring(b)} title="Restore to this pager…" aria-label="Restore to this pager…">
+                    {/* Disabled while a backup opens: opening switches page, which would unmount a running write's dialog. */}
+                    <Button variant="ghost" size="icon-sm" disabled={loadingProfile} onClick={() => setRestoring(b)} title="Restore to this pager…" aria-label="Restore to this pager…">
                       <RotateCcw />
                     </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => setCloning(b)} title="Write to another pager…" aria-label="Write to another pager…">
+                    <Button variant="ghost" size="icon-sm" disabled={loadingProfile} onClick={() => setCloning(b)} title="Write to another pager…" aria-label="Write to another pager…">
                       <Send />
                     </Button>
                     <Button
