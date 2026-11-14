@@ -154,6 +154,12 @@ fn restore_refuses_an_incomplete_safety_backup() {
     let err = format!("{:#}", run(&fake, &src.path, &restore_set(&src.path).unwrap(), root.path()).unwrap_err());
     assert!(err.contains("doesn't hold the whole profile"), "{err}");
     assert_eq!(fake.with(|s| s.write_businesses), 0);
+
+    // Present but empty is no better.
+    fake.with(|s| s.files.insert("/defpara/Applications/PPS/u3db_PC.zip.md5".into(), Vec::new()));
+    let err = format!("{:#}", run(&fake, &src.path, &restore_set(&src.path).unwrap(), root.path()).unwrap_err());
+    assert!(err.contains("is empty"), "{err}");
+    assert_eq!(fake.with(|s| s.write_businesses), 0);
 }
 
 #[test]

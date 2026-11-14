@@ -47,9 +47,11 @@ and Muse Wonder Full):
 - A pager could ask for a 4 GB read or a wait of years; reads over
   64 MiB and waits over 2 minutes are refused.
 - A crafted profile zip or PPS installer could fill the disk or memory.
-  Profile zips are limited to 4096 entries and 256 MiB expanded, and
-  installers to four nested layers, each layer and the extracted
-  database folder to 1 GiB.
+  Profile zips are limited to 4096 entries and 256 MiB expanded.
+  Installers are limited to four nested layers, and the zip layer, the
+  MSI, its cabinets and the extracted database folder to 1 GiB each. The
+  Inno setup layer is still decompressed whole in memory before its size
+  is checked; the library offers no limit.
 - The check after a write now refuses a different pager plugged in
   during the reboot (after the usual retries), and errors name the
   safety backup.

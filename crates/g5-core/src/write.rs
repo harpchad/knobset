@@ -753,8 +753,12 @@ pub(crate) fn program_on(
     } else {
         // A restore is how a damaged profile gets replaced, so it only needs
         // the files to be there; their contents may be what's broken.
+        // None of the five is ever legitimately empty.
         for p in PROFILE_FILES {
-            fs::metadata(safety.path.join(rel(p))).with_context(incomplete)?;
+            let m = fs::metadata(safety.path.join(rel(p))).with_context(incomplete)?;
+            if !m.is_file() || m.len() == 0 {
+                bail!("{}: {p} is empty", incomplete());
+            }
         }
     }
 
