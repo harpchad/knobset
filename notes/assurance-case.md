@@ -86,11 +86,11 @@ change, and an attacker who already controls the user's account.
 |---|---|---|
 | Memory corruption (787, 125) | Rust; `unsafe` limited to the SQLite 2 bindings and an iOS call | CodeQL (Rust, C); cargo-fuzz with AddressSanitizer |
 | Malformed input, integer overflow (20, 190) | Checksum and length checks; errors, not panics | Unit tests; fuzz targets with overflow checks |
-| SQL injection (89) | Values bound with `sqlite_bind`; table names from code | Code review; CodeQL |
-| Path traversal, zip slip, symlinks (22, 59) | Enclosed zip paths, symlinks refused, single-component MSI names, pager path allowlist | Unit tests (`write_path_allowlist` and import tests) |
+| SQL injection (89) | Edit code binds values with `sqlite_bind`; table names from code; one statement per call. The radio-DB converter builds some statements as text from profile values (free text is quoted), and the write guard checks its output table by table | Code review; CodeQL |
+| Path traversal, zip slip, symlinks (22, 59) | Enclosed zip paths, symlinks refused, single-component MSI names and pager listing names, GUID-only system IDs, pager path allowlist | Unit tests (`write_path_allowlist`, `listing_names_must_be_plain_file_names`, `system_ids_must_be_guids`, import tests); `backup_refuses_unsafe_listing_names` against a fake pager |
 | Cross-site scripting (79) | React escaping; no raw HTML; CSP `default-src 'self'` | `app/src-tauri/tauri.conf.json` |
 | Command injection (78) | No shell or process spawning | Code search; CodeQL |
-| Credentials in logs (532) | Handshake and access checks redacted in `-vv` traces | `wire_trace_never_shows_the_password` test |
+| Credentials in logs (532) | Handshake and access checks redacted in `-vv` traces | `wire_trace_hides_credentials` test |
 | Broken crypto (327) | MD5 only where the pager requires it, risk documented | SECURITY.md, Cryptography |
 | Vulnerable or tampered dependencies (1395, 494) | Dependabot, OSV triage, SHA-pinned actions, attestations | `osv-scanner.toml`, Scorecard |
 
@@ -100,8 +100,6 @@ change, and an attacker who already controls the user's account.
   with the USB link can reprogram a pager. Knobset can't fix that.
 - The vendored SQLite 2 C code isn't fuzzed directly yet (on the
   [roadmap](../ROADMAP.md)).
-- Windows installers aren't Authenticode-signed; checksums and
-  attestations are the verification path.
 - One maintainer (see [GOVERNANCE.md](../GOVERNANCE.md)), and CodeRabbit
   has write access to the repository; `main` and release tags are
   protected by rulesets.

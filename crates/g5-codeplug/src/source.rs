@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use sqlite2::Connection;
@@ -13,6 +13,11 @@ use crate::Error;
 pub const BACKUP_PROFILE_ZIP: &str = "defpara/Applications/PPS/u3db_PC.zip";
 /// Path of the radio DB PPS uploaded, inside a `g5 backup` folder.
 pub const BACKUP_RADIO_DB: &str = "defpara/Applications/PPS/u3db.db";
+
+/// Limits for a profile zip, which may be a backup someone shared. Real
+/// ones expand to under 2 MB in a few dozen entries.
+const MAX_ZIP_ENTRIES: usize = 4096;
+const MAX_ZIP_BYTES: u64 = 256 * 1024 * 1024;
 
 /// A PPS profile: `<GUID>.db` plus its `<GUID>/` resource folder (one DB per
 /// P25 system, tone/prompt catalogs, custom wavs).
@@ -25,12 +30,21 @@ pub struct Profile {
     _tmp: Option<tempfile::TempDir>,
 }
 
+/// A GUID in either case, the only shape PPS gives system IDs.
+pub(crate) fn is_system_id(id: &str) -> bool {
+    id.len() == 36 && id.char_indices().all(|(i, c)| if [8, 13, 18, 23].contains(&i) { c == '-' } else { c.is_ascii_hexdigit() })
+}
+
 impl Profile {
     /// Load from a `u3db_PC.zip` (what PPS stores on the pager).
     pub fn from_zip(zip_path: &Path) -> Result<Self, Error> {
         let tmp = tempfile::tempdir()?;
         let file = fs::File::open(zip_path)?;
         let mut zip = zip::ZipArchive::new(file)?;
+        if zip.len() > MAX_ZIP_ENTRIES {
+            return Err(Error::Invalid(format!("the profile zip has {} entries; a profile has a few dozen", zip.len())));
+        }
+        let mut budget = MAX_ZIP_BYTES;
         for i in 0..zip.len() {
             let mut entry = zip.by_index(i)?;
             let name = entry.name().map(|n| n.into_owned()).unwrap_or_default();
@@ -47,13 +61,21 @@ impl Profile {
                 if let Some(p) = dest.parent() {
                     fs::create_dir_all(p)?;
                 }
-                io::copy(&mut entry, &mut fs::File::create(&dest)?)?;
+                // Counted as it's written, not from the header, which could lie.
+                let n = io::copy(&mut (&mut entry).take(budget + 1), &mut fs::File::create(&dest)?)?;
+                if n > budget {
+                    return Err(Error::Invalid(format!("the profile zip expands to more than {} MiB", MAX_ZIP_BYTES >> 20)));
+                }
+                budget -= n;
             }
         }
-        let root_db = fs::read_dir(tmp.path())?
-            .filter_map(|e| e.ok().map(|e| e.path()))
-            .find(|p| p.is_file() && p.extension().is_some_and(|x| x == "db"))
-            .ok_or_else(|| Error::Invalid("no <GUID>.db at the root of the profile zip".into()))?;
+        let roots: Vec<PathBuf> =
+            fs::read_dir(tmp.path())?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.is_file() && p.extension().is_some_and(|x| x == "db")).collect();
+        // Exactly one, or which profile loads would depend on directory order.
+        let [root_db] = roots.as_slice() else {
+            return Err(Error::Invalid(format!("the profile zip should have one <GUID>.db at its root, not {}", roots.len())));
+        };
+        let root_db = root_db.clone();
         let folder = root_db.with_extension("");
         let mut p = Self::from_parts(&root_db, &folder)?;
         p._tmp = Some(tmp);
@@ -81,9 +103,19 @@ impl Profile {
         self._tmp.is_some()
     }
 
+    /// Path of the per-system DB `<folder>/<id>.db`. System IDs come from the
+    /// profile, which may be a backup someone shared, so anything but a GUID
+    /// is refused before it reaches the filesystem.
+    pub fn system_db_path(&self, id: &str) -> Result<PathBuf, Error> {
+        if !is_system_id(id) {
+            return Err(Error::Invalid(format!("profile has a system ID that is not a GUID: {id:?}")));
+        }
+        Ok(self.folder.join(format!("{id}.db")))
+    }
+
     /// Open the per-system DB `<folder>/<id>.db`.
     pub fn system_db(&self, id: &str) -> Result<Connection, Error> {
-        let p = self.folder.join(format!("{id}.db"));
+        let p = self.system_db_path(id)?;
         if !p.is_file() {
             return Err(Error::Invalid(format!("profile references missing system DB {id}.db")));
         }
@@ -149,6 +181,50 @@ mod tests {
             let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
             assert!(err.contains("unsafe path"), "{name}: {err}");
         }
+    }
+
+    #[test]
+    fn system_ids_must_be_guids() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("p.db");
+        Connection::open(&db).unwrap().execute_batch("CREATE TABLE t(a);").unwrap();
+        let p = Profile::from_parts(&db, &dir.path().join("p")).unwrap();
+        for ok in ["0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e10", "0E8C1A52-6F1B-4D1E-9A43-5B7F2C8D9E10"] {
+            assert_eq!(p.system_db_path(ok).unwrap(), dir.path().join("p").join(format!("{ok}.db")));
+        }
+        for bad in ["", "../0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e1", "/etc/passwd", "AlertToneTotal", "0e8c1a52-6f1b-4d1e-9a43-5b7f2c8d9e1g", "\\\\host\\share\\x"] {
+            assert!(p.system_db_path(bad).is_err(), "{bad:?}");
+            assert!(p.system_db(bad).is_err(), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn zip_bombs_are_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("u3db_PC.zip");
+        let mut w = zip::ZipWriter::new(fs::File::create(&path).unwrap());
+        let o = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated).large_file(true);
+        w.start_file("big.db", o).unwrap();
+        let chunk = vec![0u8; 1 << 20];
+        for _ in 0..=(MAX_ZIP_BYTES >> 20) {
+            w.write_all(&chunk).unwrap();
+        }
+        w.finish().unwrap();
+        let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
+        assert!(err.contains("expands to more than"), "{err}");
+    }
+
+    #[test]
+    fn zip_needs_exactly_one_root_db() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = zip_at(dir.path(), |w, o| {
+            for n in ["a.db", "b.db"] {
+                w.start_file(n, o).unwrap();
+                w.write_all(b"x").unwrap();
+            }
+        });
+        let err = Profile::from_zip(&path).err().map(|e| e.to_string()).unwrap_or_default();
+        assert!(err.contains("not 2"), "{err}");
     }
 
     #[test]

@@ -65,7 +65,7 @@ export default function WriteDialog({ open, onOpenChange }: { open: boolean; onO
         await refreshBackups();
         await openBackup(b.id);
       } catch (e) {
-        await refreshBackups();
+        await refreshBackups().catch(() => {}); // the write itself succeeded; don't report it as failed
         toast.warning(`The write worked, but backing up the new profile failed (${String(e)}). Take a backup before your next change.`);
       }
     } catch (e) {

@@ -28,7 +28,12 @@ pub struct Imported {
 /// Extract the template folder from `src` (PPS zip, Inno exe, or MSI) into
 /// `dest`, replacing any previous import only once the new one is complete.
 pub fn import_installer(src: &Path, dest: &Path) -> Result<Imported, Error> {
-    let msi = find_msi(fs::read(src)?)?;
+    let mut bytes = Vec::new();
+    fs::File::open(src)?.take(MAX_LAYER_BYTES + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_LAYER_BYTES {
+        return Err(Error::Installer("this file is far bigger than PPS's installer".into()));
+    }
+    let msi = find_msi(bytes)?;
     let name = dest.file_name().ok_or_else(|| Error::Installer("destination has no folder name".into()))?;
     let staging = dest.with_file_name(format!(".{}.partial", name.to_string_lossy()));
     if staging.exists() {
@@ -51,6 +56,18 @@ pub fn import_installer(src: &Path, dest: &Path) -> Result<Imported, Error> {
 
 /// Peel the zip and Inno layers until the MSI is reached.
 fn find_msi(bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
+    find_msi_in(bytes, 0)
+}
+
+/// Unication ships at most a zip around an Inno setup around the MSI.
+const MAX_LAYERS: usize = 4;
+/// The 0.4 installer is about 53 MB; anything far bigger isn't one.
+const MAX_LAYER_BYTES: u64 = 1024 * 1024 * 1024;
+
+fn find_msi_in(bytes: Vec<u8>, depth: usize) -> Result<Vec<u8>, Error> {
+    if depth >= MAX_LAYERS {
+        return Err(Error::Installer("too many nested archives for a PPS installer".into()));
+    }
     match bytes.get(..4) {
         Some([0xD0, 0xCF, 0x11, 0xE0]) => Ok(bytes),
         Some([b'P', b'K', 3, 4]) => {
@@ -59,8 +76,11 @@ fn find_msi(bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
                 .find(|&i| zip.by_index(i).is_ok_and(|e| e.name().is_ok_and(|n| is_installer_name(&n))))
                 .ok_or_else(|| Error::Installer("the zip has no PPS installer in it".into()))?;
             let mut inner = Vec::new();
-            zip.by_index(idx)?.read_to_end(&mut inner)?;
-            find_msi(inner)
+            zip.by_index(idx)?.take(MAX_LAYER_BYTES + 1).read_to_end(&mut inner)?;
+            if inner.len() as u64 > MAX_LAYER_BYTES {
+                return Err(Error::Installer("the installer in the zip is far bigger than PPS's".into()));
+            }
+            find_msi_in(inner, depth + 1)
         }
         Some([b'M', b'Z', ..]) => {
             let inst = innospect::InnoInstaller::from_bytes(&bytes).map_err(|e| Error::Installer(e.to_string()))?;
@@ -69,7 +89,13 @@ fn find_msi(bytes: Vec<u8>) -> Result<Vec<u8>, Error> {
                 .iter()
                 .find(|f| f.destination.to_lowercase().ends_with(INNER_MSI))
                 .ok_or_else(|| Error::Installer("this installer doesn't contain PPS_Setup.msi".into()))?;
-            inst.extract_to_vec(file).map_err(|e| Error::Installer(e.to_string()))
+            let mut reader = inst.extract(file).map_err(|e| Error::Installer(e.to_string()))?;
+            if reader.len() as u64 > MAX_LAYER_BYTES {
+                return Err(Error::Installer("the MSI in the installer is far bigger than PPS's".into()));
+            }
+            let mut msi = Vec::with_capacity(reader.len());
+            reader.read_to_end(&mut msi).map_err(|e| Error::Installer(e.to_string()))?;
+            Ok(msi)
         }
         _ => Err(Error::Installer("not a PPS installer (expected the .zip, .exe, or .msi from Unication)".into())),
     }
@@ -143,7 +169,10 @@ fn extract_database(msi_bytes: Vec<u8>, out: &Path) -> Result<(usize, u64), Erro
     let (mut files, mut bytes) = (0, 0);
     for name in cabs {
         let mut buf = Vec::new();
-        pkg.read_stream(&name)?.read_to_end(&mut buf)?;
+        pkg.read_stream(&name)?.take(MAX_LAYER_BYTES + 1).read_to_end(&mut buf)?;
+        if buf.len() as u64 > MAX_LAYER_BYTES {
+            return Err(Error::Installer(format!("cabinet {name} is far bigger than PPS's")));
+        }
         let mut cab = cab::Cabinet::new(Cursor::new(buf))?;
         let keys: Vec<String> = cab.folder_entries().flat_map(|f| f.file_entries().map(|e| e.name().to_string())).collect();
         for key in keys {
@@ -152,7 +181,13 @@ fn extract_database(msi_bytes: Vec<u8>, out: &Path) -> Result<(usize, u64), Erro
             if let Some(p) = dest.parent() {
                 fs::create_dir_all(p)?;
             }
-            bytes += std::io::copy(&mut cab.read_file(&key)?, &mut fs::File::create(&dest)?)?;
+            // Counted as it's written: the database folder is about 50 MB.
+            let left = MAX_LAYER_BYTES.saturating_sub(bytes);
+            let n = std::io::copy(&mut cab.read_file(&key)?.take(left + 1), &mut fs::File::create(&dest)?)?;
+            if n > left {
+                return Err(Error::Installer("the installer's database folder is far bigger than PPS's".into()));
+            }
+            bytes += n;
             files += 1;
         }
     }

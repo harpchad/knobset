@@ -24,7 +24,7 @@ use serde::Serialize;
 
 use crate::Progress;
 use crate::device::{connect, hex_upper};
-use crate::write::{PC_DB, PC_ZIP, PagerId, RADIO_DB, WriteResult, WriteSet, load_backup_files, program_on, restore_set, tempfile_path};
+use crate::write::{PC_DB, PC_ZIP, PagerId, RADIO_DB, WriteResult, WriteSet, load_backup_files, files_set, program_on};
 
 /// One side of a clone, for display.
 #[derive(Debug, Clone, Serialize)]
@@ -127,7 +127,9 @@ pub fn clone_set(source: &Path, target: &Path, templates: &Path) -> Result<(Writ
     let variant = check_clone_compatible(&src_id, &tgt_id)?;
     let src_variant = Variant::for_db_version(&src_id.db_version).unwrap();
     load_backup_files(source).context("source backup")?;
-    let mut set = restore_set(target).context("target backup")?;
+    // Every target file is replaced, so the target only has to load; the
+    // safety backup taken before writing is what must restore.
+    let mut set = files_set(load_backup_files(target).context("target backup")?);
     let templates = Templates::new(templates)?;
 
     let original = Profile::from_backup(source)?;
@@ -153,7 +155,9 @@ pub fn clone_set(source: &Path, target: &Path, templates: &Path) -> Result<(Writ
     }
 
     // The source's own radio DB must regenerate exactly, or nothing below proves anything.
-    let (src_regen, out, ref_db) = (tempfile_path("g5-clone-src"), tempfile_path("g5-clone-out"), tempfile_path("g5-clone-ref"));
+    // A private folder: other local users can't plant files where these go.
+    let tmp = tempfile::tempdir()?;
+    let (src_regen, out, ref_db) = (tmp.path().join("clone-src.db"), tmp.path().join("clone-out.db"), tmp.path().join("clone-ref.db"));
     let cleanup = || {
         for f in [&src_regen, &out, &ref_db] {
             let _ = fs::remove_file(f);

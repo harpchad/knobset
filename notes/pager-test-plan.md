@@ -118,6 +118,7 @@ experimental, for anyone who can test them.
 | 34 | C after the clone | Check C's trunked knobs, then rename a knob on C and write | Knobs receive and the normal write path works on C | Restore C's safety backup afterwards if you want C back |
 | 35 | Linux | Install the .deb or AppImage from a release; plug in a pager | `ip -br addr` shows an `enx...` interface (`enp...u...` on Arch) on 10.10.0.x; back up, then rename one knob and write | Needs a Linux machine |
 | 36 | Windows | Run the installer (SmartScreen: More info, Run anyway); plug in a pager | If it shows as USB Serial Device (COM3) or under Other devices, install Unication's RNDIS driver (x64) or run `install-rndis.ps1` (ARM); `ipconfig` shows 10.10.0.x; back up, rename, write | Needs a Windows machine |
+| 37 | Restore in the app | Rename a knob and write, then on the Backups page restore the safety backup that write took | The rename is gone from the pager; the dialog says Restored and verified; a fresh backup matches the one restored table for table | New after 0.7.0; until then only `g5 restore` did this |
 
 ## Results (0.6, 2026-10-20 to 2026-10-30)
 
@@ -127,6 +128,7 @@ experimental, for anyone who can test them.
 | 13 | Pass | Pager B |
 | 14 | Pass | Pager B, covered before the step was run on purpose |
 | 15 to 31 | Not run | |
+| 37 | Not run | |
 | 32 | Pass | 2026-10-29, B's newest backup (1.41c) onto C's (1.41e): C keeps its radio number, alias, unit IDs and passwords; 4 zones, 27 knobs and 8 systems replace C's 3, 20 and 7; the radio DB is regenerated for 1.41e. B and C already shared radio number User-001, alias and P25 unit ID, so keeping C's own values can't be told apart from copying B's |
 | 33 | Pass | 2026-10-29 from the CLI over the Linux laptop. C's profile DB matches B's in all 163 tables; its live and staged radio DBs match B's profile converted for 1.41e in all 194. C shows the Test zone, knobs receive, and the handshake still reports User-001. The first attempt was refused: the target guard compared bytes, and C's radio DB had been rewritten with the same tables by step 36's rename-back (fixed after: the guard now compares tables) |
 | 34 | Pass, with a bug | 2026-10-30, Linux app 0.6.2: knob rename on Metro knob 8 applied (backup shows only that change), but the dialog said "session ID mismatch (got 711, want 25)". The clock reply arrived after `set_date_time` stopped waiting and the commit read it as its own; fixed after 0.6.2. Renamed back from the CLI; C matches its post-clone backup table for table |

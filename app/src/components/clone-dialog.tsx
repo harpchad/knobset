@@ -87,8 +87,9 @@ export default function CloneDialog({ source, open, onOpenChange }: { source: Ba
       const result = await api.cloneToPager(source.id, target.id);
       setPhase({ kind: "done", result });
       toast.success(`${target.serial} programmed and verified`);
-      await refreshBackups();
       if (!result.new_backup) toast.warning("The write worked, but backing up the new profile failed. Back up the target before its next change.");
+      // The write is done; a failed list refresh mustn't turn it into an error.
+      refreshBackups().catch((e) => toast.error("Couldn't refresh the backup list", { description: String(e) }));
     } catch (e) {
       setPhase({ kind: "error", message: String(e) });
     } finally {

@@ -5,6 +5,11 @@ pub mod clone;
 pub mod device;
 pub mod write;
 
+#[cfg(test)]
+mod fake_pager;
+#[cfg(test)]
+mod write_flow_tests;
+
 use serde::Serialize;
 
 /// Progress report for long operations.

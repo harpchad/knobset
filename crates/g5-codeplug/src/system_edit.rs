@@ -696,7 +696,7 @@ pub fn create_system(p: &Profile, templates: &Templates, new: &NewSystem, now: &
     if index.len() >= MAX_SYSTEMS {
         return Err(Error::Invalid(format!("a profile holds at most {MAX_SYSTEMS} systems")));
     }
-    let path = p.folder.join(format!("{id}.db"));
+    let path = p.system_db_path(id)?;
     if index.iter().any(|r| r.s("P25TrunkingID") == id) || path.exists() {
         return Err(Error::Invalid(format!("system {id} already exists")));
     }
@@ -806,7 +806,7 @@ pub fn copy_system(p: &Profile, templates: &Templates, copy: &SystemCopy, now: &
     if index.len() >= MAX_SYSTEMS {
         return Err(Error::Invalid(format!("a profile holds at most {MAX_SYSTEMS} systems")));
     }
-    let path = p.folder.join(format!("{id}.db"));
+    let path = p.system_db_path(id)?;
     if index.iter().any(|r| r.s("P25TrunkingID") == id) || path.exists() {
         return Err(Error::Invalid(format!("system {id} already exists")));
     }
@@ -823,7 +823,7 @@ pub fn copy_system(p: &Profile, templates: &Templates, copy: &SystemCopy, now: &
     if band.is_empty() || band.len() % 2 != 0 || band.as_bytes().chunks(2).any(|c| !bands.iter().any(|b| b.as_bytes() == c)) {
         return Err(Error::Invalid(format!("{} is a {} system; this pager's bands are {}", row.s("SystemName"), if band.is_empty() { "no-band" } else { band }, bands.join(", "))));
     }
-    let src_path = source.folder.join(format!("{}.db", copy.source_id));
+    let src_path = source.system_db_path(&copy.source_id)?;
     if !src_path.is_file() {
         return Err(Error::Invalid(format!("that backup has no system DB for {}", row.s("SystemName"))));
     }
@@ -885,7 +885,7 @@ pub fn delete_system(p: &Profile, system_id: &str, now: &str) -> Result<SystemCh
     if !users.is_empty() {
         return Err(Error::Invalid(format!("{name} is used by {}; move those knobs to another system first", users.join(", "))));
     }
-    let path = p.folder.join(format!("{system_id}.db"));
+    let path = p.system_db_path(system_id)?;
     p.db.execute_batch("BEGIN;")?;
     let r = (|| -> Result<(), Error> {
         p.db.execute("DELETE FROM tabP25TrunkingSecurity WHERE P25TrunkingID = ?", &[Some(system_id)])?;

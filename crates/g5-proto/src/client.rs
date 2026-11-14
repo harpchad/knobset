@@ -18,6 +18,14 @@ pub const DEFAULT_ADDR: &str = "10.10.0.12:32769";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(8);
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(2);
 const RETRIES: usize = 3;
+/// ACKs for other chunks tolerated while waiting for one chunk's ACK.
+const MAX_STALE_ACKS: usize = 8;
+/// Largest file a read accepts. Profiles are a few MB; the pager announces
+/// the length, so this bounds what it can make us allocate.
+pub const MAX_READ: usize = 64 * 1024 * 1024;
+/// Longest wait an Accepted packet can ask for. The slowest step seen on
+/// hardware, the commit, answers in about 2 s.
+const MAX_ACCEPTED_WAIT: u64 = 120;
 /// PPS sends file data in chunks of at most this many bytes.
 pub const MAX_CHUNK: usize = 2048;
 
@@ -207,9 +215,9 @@ impl<T: Transport> Client<T> {
                     Self::check_session(&p, session)?;
                     self.ack_seq = p.seq;
                     self.ack(opcode, p.seq)?;
-                    let secs = be_uint(p.body(session.is_some()));
+                    let secs = (be_uint(p.body(session.is_some())) as u64).clamp(1, MAX_ACCEPTED_WAIT);
                     debug!("pager accepted {}, wait up to {secs}s", hex(&opcode));
-                    self.io.set_timeout(Duration::from_secs(secs.max(1) as u64) + timeout)?;
+                    self.io.set_timeout(Duration::from_secs(secs) + timeout)?;
                 }
                 PacketType::Response => {
                     Self::check_session(&p, session)?;
@@ -252,6 +260,9 @@ impl<T: Transport> Client<T> {
         }
         let total = be_uint(len) as usize;
         debug!("read {} expects {total} bytes", hex(&opcode));
+        if total > MAX_READ {
+            return Err(Error::Malformed("read longer than any profile file"));
+        }
 
         let mut data = Vec::with_capacity(total);
         loop {
@@ -328,24 +339,35 @@ impl<T: Transport> Client<T> {
         let seq = self.next_seq();
         let pkt = Packet::new(opcode, seq, self.ack_seq, PacketType::Inform, content);
         let mut last = Error::Timeout;
+        let mut stale = 0;
         for attempt in 0..RETRIES {
             if attempt > 0 {
                 debug!("resending chunk seq {seq} (attempt {})", attempt + 1);
             }
             self.send(&pkt)?;
-            match self.recv_checked(opcode) {
-                Ok(p) if p.opcode == op::ABORT => return Err(Error::Abort(p.body(true).first().copied())),
-                Ok(p) if p.opcode == op::CANCEL => return Err(Error::Cancelled),
-                Ok(p) if p.ptype == PacketType::Ack => {
-                    if p.ack_seq != seq {
-                        warn!("ACK for seq {} while sending seq {seq}", p.ack_seq);
+            loop {
+                match self.recv_checked(opcode) {
+                    Ok(p) if p.opcode == op::ABORT => return Err(Error::Abort(p.body(true).first().copied())),
+                    Ok(p) if p.opcode == op::CANCEL => return Err(Error::Cancelled),
+                    // The pager ACKs a chunk with its seq. Only that ACK delivers it.
+                    Ok(p) if p.ptype == PacketType::Ack && p.ack_seq == seq => return Ok(()),
+                    // A second ACK for a chunk sent twice: keep waiting for ours.
+                    Ok(p) if p.ptype == PacketType::Ack && stale < MAX_STALE_ACKS => {
+                        stale += 1;
+                        debug!("stale ACK for seq {} while sending seq {seq}", p.ack_seq);
                     }
-                    return Ok(());
+                    Ok(p) if p.ptype == PacketType::Ack => return Err(Error::Malformed("too many ACKs for other chunks")),
+                    Ok(p) if p.ptype == PacketType::Nak => {
+                        last = Error::Nak(p.state);
+                        break;
+                    }
+                    Ok(p) => return Err(Error::Unexpected(p.ptype)),
+                    Err(Error::Timeout) => {
+                        last = Error::Timeout;
+                        break;
+                    }
+                    Err(e) => return Err(e),
                 }
-                Ok(p) if p.ptype == PacketType::Nak => last = Error::Nak(p.state),
-                Ok(p) => return Err(Error::Unexpected(p.ptype)),
-                Err(Error::Timeout) => last = Error::Timeout,
-                Err(e) => return Err(e),
             }
         }
         Err(last)
@@ -736,6 +758,32 @@ mod tests {
             .map(|p| (p.opcode, p.ack_seq))
             .collect();
         assert_eq!(acks, vec![(op::SET_DATE_TIME, 9), (op::END_BUSINESS, 10)]);
+    }
+
+    #[test]
+    fn only_the_chunk_s_own_ack_delivers_it() {
+        // A stale ACK (seq 2) arrives before the real one (seq 3): one send, then success.
+        let mut c = Client::new(pager(&[
+            Packet::new(op::CONTINUE, 0, 2, PacketType::Ack, vec![]),
+            Packet::new(op::CONTINUE, 0, 3, PacketType::Ack, vec![]),
+        ]));
+        c.seq = 3;
+        c.send_chunk(op::CONTINUE, 1, b"x").unwrap();
+        assert_eq!(sent(&c.into_inner().tx).len(), 1);
+
+        // Only a stale ACK: the chunk is resent and then fails, never counted as delivered.
+        let mut c = Client::new(pager(&[Packet::new(op::CONTINUE, 0, 2, PacketType::Ack, vec![])]));
+        c.seq = 3;
+        assert!(matches!(c.send_chunk(op::CONTINUE, 1, b"x"), Err(Error::Timeout)));
+        assert_eq!(sent(&c.into_inner().tx).len(), RETRIES);
+    }
+
+    #[test]
+    fn oversized_read_is_refused_before_allocating() {
+        let mut status = vec![0];
+        status.extend(u32::MAX.to_be_bytes());
+        let mut c = Client::new(pager(&[Packet::new(op::READ_PATH, 2, 1, PacketType::Response, with_session(1, &status))]));
+        assert!(matches!(c.list_dir("/x/"), Err(Error::Malformed(_))));
     }
 
     #[test]

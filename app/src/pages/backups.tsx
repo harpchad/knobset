@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FolderSearch, Send, ShieldCheck, ShieldAlert } from "lucide-react";
+import { FolderSearch, RotateCcw, Send, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,13 @@ import { fileManagerName } from "@/lib/platform";
 import { formatTaken } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import CloneDialog from "@/components/clone-dialog";
+import RestoreDialog from "@/components/restore-dialog";
 import type { BackupInfo } from "@/lib/types";
 
 export default function BackupsPage() {
   const { backups, openBackup, profile, loadingProfile, settings } = useStore();
   const [cloning, setCloning] = useState<BackupInfo | null>(null);
+  const [restoring, setRestoring] = useState<BackupInfo | null>(null);
   const newest = new Map<string, string>();
   for (const b of backups) if (!newest.has(b.serial)) newest.set(b.serial, b.id);
 
@@ -70,7 +72,11 @@ export default function BackupsPage() {
                         <FolderSearch />
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon-sm" onClick={() => setCloning(b)} title="Write to another pager…" aria-label="Write to another pager…">
+                    {/* Disabled while a backup opens: opening switches page, which would unmount a running write's dialog. */}
+                    <Button variant="ghost" size="icon-sm" disabled={loadingProfile} onClick={() => setRestoring(b)} title="Restore to this pager…" aria-label="Restore to this pager…">
+                      <RotateCcw />
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" disabled={loadingProfile} onClick={() => setCloning(b)} title="Write to another pager…" aria-label="Write to another pager…">
                       <Send />
                     </Button>
                     <Button
@@ -89,6 +95,7 @@ export default function BackupsPage() {
         </div>
       )}
       <CloneDialog source={cloning} open={!!cloning} onOpenChange={(o) => !o && setCloning(null)} />
+      <RestoreDialog backup={restoring} open={!!restoring} onOpenChange={(o) => !o && setRestoring(null)} />
     </div>
   );
 }

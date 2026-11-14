@@ -186,7 +186,13 @@ impl Connection {
             return Err(Error::MultipleStatements);
         }
         // Bound strings must outlive sqlite_bind; copy=1 makes SQLite own a copy anyway.
-        let owned: Vec<Option<CString>> = params.iter().map(|p| p.map(CString::new).transpose()).collect::<std::result::Result<_, _>>()?;
+        let owned: Vec<Option<CString>> = match params.iter().map(|p| p.map(CString::new).transpose()).collect() {
+            Ok(v) => v,
+            Err(e) => {
+                unsafe { ffi::sqlite_finalize(vm, ptr::null_mut()) };
+                return Err(e.into());
+            }
+        };
         for (i, p) in owned.iter().enumerate() {
             let v = p.as_ref().map_or(ptr::null(), |c| c.as_ptr());
             let rc = unsafe { ffi::sqlite_bind(vm, (i + 1) as c_int, v, -1, 1) };
@@ -197,7 +203,7 @@ impl Connection {
         }
 
         let mut columns: Vec<String> = Vec::new();
-        loop {
+        let step = loop {
             let mut n: c_int = 0;
             let mut values: *const *const c_char = ptr::null();
             let mut names: *const *const c_char = ptr::null();
@@ -212,14 +218,20 @@ impl Connection {
                 }
                 ffi::SQLITE_DONE => {
                     on_row(&columns, None);
-                    break;
+                    break rc;
                 }
-                _ => break,
+                _ => break rc,
             }
-        }
+        };
         let mut err: *mut c_char = ptr::null_mut();
         let rc = unsafe { ffi::sqlite_finalize(vm, &mut err) };
-        check(rc, err)
+        check(rc, err)?;
+        // finalize normally repeats a failed step's error; if it doesn't, don't
+        // let the rows read so far pass as the whole result.
+        if step != ffi::SQLITE_DONE {
+            return Err(Error::Sqlite { code: step, message: code_string(step) });
+        }
+        Ok(())
     }
 }
 

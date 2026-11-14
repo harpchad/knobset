@@ -471,6 +471,22 @@ export async function mockInvoke<T>(cmd: string, args: Record<string, unknown> =
       emit({ message: "Verified", done: 0, total: 0 });
       return { safety_backup: safety, verified: ["u3db_PC.db", "u3db.db", "u3db.db.md5", "u3db_PC.zip", "u3db_PC.zip.md5"], new_backup: await fakeBackup() } as T;
     }
+    case "plan_restore":
+      return [["/defpara/Applications/PPS/u3db_PC.db", 437248], ["/defpara/Applications/PPS/u3db.db", 615424], ["/defpara/Applications/PPS/u3db.db.md5", 32], ["/defpara/Applications/PPS/u3db_PC.zip", 259852], ["/defpara/Applications/PPS/u3db_PC.zip.md5", 32]] as T;
+    case "restore_to_pager": {
+      emit({ message: "Connecting", done: 0, total: 0 });
+      await sleep(400);
+      const safety = await fakeBackup();
+      const total = 1_312_588;
+      for (let d = 0; d <= total; d += 65_536) {
+        emit({ message: "Writing profile", done: Math.min(d, total), total });
+        await sleep(60);
+      }
+      emit({ message: "Pager is rebooting to apply the profile", done: 0, total: 0 });
+      await sleep(1500);
+      emit({ message: "Verified", done: 0, total: 0 });
+      return { safety_backup: safety, verified: ["u3db_PC.db", "u3db.db", "u3db.db.md5", "u3db_PC.zip", "u3db_PC.zip.md5"], new_backup: await fakeBackup() } as T;
+    }
     case "write_to_pager": {
       emit({ message: "Connecting", done: 0, total: 0 });
       await sleep(400);
