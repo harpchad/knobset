@@ -6,6 +6,16 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-14
+
+Security and safety fixes from a review of 0.7.0 by three AI models, and
+restore from the Backups page. The worst fix closes a path traversal: a
+pager, or a device posing as one, could make a backup write files
+outside its folder. A new fake pager tests the whole write flow on every
+change. None of this has been run on a real pager yet; the write and
+restore paths are stricter than 0.7.0's, so report any write that 0.7.0
+accepted and 0.7.1 refuses.
+
 ### Added
 
 - Restore from the Backups page: write a backup back to the pager it came
