@@ -6,6 +6,12 @@ All notable changes to Knobset are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Release builds failed on macOS 27: a stripped proc-macro library
+  doesn't load there. Build scripts and proc-macros are no longer
+  stripped; the shipped app still is.
+
 ## [0.7.1] - 2026-11-14
 
 Security and safety fixes from a review of 0.7.0 by three AI models, and
