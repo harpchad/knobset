@@ -38,3 +38,9 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# Build scripts and proc-macros stay unstripped. On macOS 27, a stripped
+# proc-macro dylib fails to load ("mis-aligned LINKEDIT string pool"), so
+# release builds stopped compiling. The shipped binaries are still stripped.
+[profile.release.build-override]
+strip = false
